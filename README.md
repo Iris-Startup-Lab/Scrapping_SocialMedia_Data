@@ -1,20 +1,33 @@
 # Iris Social Media Downloader
 
 El objetivo de este repositorio es mostrar los métodos para obtener los 
-comentarios de diferentes redes sociales 
+comentarios de diferentes redes sociales y obtener lo siguiente:
+
+- Nombre de usuario
+- Comentario
+- Calificación (Si aplica)
+- Likes o interacciones (Si aplica)
+- Fecha de publicación
+- Número de respuestas (Si aplica)
+
+
+
 
 ## Redes Sociales objetivo
 
-### Twitter
+### Twitter (X)
 Para el caso de Twitter, se ha logrado tener acceso a través de 
 [X Developers](https://developer.x.com/en) con ayuda de la librería
 [Tweepy](https://www.tweepy.org/)
 Pero estamos limitados a 100 tweets mensuales (respuestas incluídas) y la versión
-de pago cuesta $200 USD por lo que se buscarán alternativas usando Web Scrapping
+de pago cuesta $200 USD por lo que se buscarán alternativas usando Web Scrapping.
+
 El método alternativo comprende utilizar 
-BeautifulSoup junto con Selenium
+[BeautifulSoup](https://pypi.org/project/beautifulsoup4/) junto con [Selenium](https://www.selenium.dev/)
+
 Si esto no llegara a funcionar, usaremos LLLMs con 
-Ollama para poder hacerlo de manera más efectiva
+[Ollama](https://ollama.com/) junto con [Cursor](https://www.anthropic.com/) para poder hacerlo de manera más efectiva.
+
 
 
 
@@ -29,6 +42,8 @@ obtener comentarios de cualquier video público.
 Para el caso de Facebook, se está esperando a la aprobación de la app 
 para poder usar sus endpoint
 [Facebook Developers](https://developers.facebook.com)
+
+Si la aplicación no es aprobada, se evualuarán métodos alternativos como los que se usarán en Twitter.
 
 ### Amazon Comments
 Se está desarrollando también un script para poder minar los comentarios de los reviews de productos de Amazon
