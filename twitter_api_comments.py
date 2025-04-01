@@ -6,13 +6,13 @@ import pandas as pd
 
 
 
-def getCommentsFromTweet(tweet_id, bearer_token):
+def getCommentsFromTweet(tweet_id, bearer_token, max_results=10):
     client = tweepy.Client(bearer_token=bearer_token)
     listTweets = client.search_recent_tweets(
         query=f"conversation_id:{tweet_id}",
         expansions=["author_id"],  
         user_fields=["username"],  
-        max_results=50
+        max_results=max_results
     )
     tweets = listTweets.data
     users = {u["id"]: u for u in listTweets.includes["users"]}
