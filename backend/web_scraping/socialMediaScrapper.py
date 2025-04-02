@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import re 
-from GetCredentials import *
+from backend.web_scraping.GetCredentials import *
 from twitter_api_comments import getCommentsFromTweet
 
 from youtube_api_comments import commentsFromVideo, commentstoDf
