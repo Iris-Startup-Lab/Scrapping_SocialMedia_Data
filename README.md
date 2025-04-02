@@ -21,7 +21,7 @@ Este sitio ([Supabase](https://supabase.com/)) nos permite crear una base de dat
 
 
 ### FrontEnd
-El frontend se planea realizarlo con [Vue.js](https://vuejs.org/) usando el lenguaje de programación Javascript con [Node](https://nodejs.org)
+El frontend se planea realizarlo con [Vue.js](https://vuejs.org/) o [Angular.js](https://angular.dev/) usando el lenguaje de programación Javascript (Typescript) con [Node](https://nodejs.org)
 
 ### BackEnd
 El Backend se realizará con [Django](https://www.djangoproject.com/) usando el lenguaje de programación Python.

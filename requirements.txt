@@ -1,0 +1,26 @@
+# Comenzando los requirements de Python
+## Para el backend
+Django
+firebase-admin
+## Para el web Scraping
+scrapy 
+psycopg2-binary  
+requests         
+beautifulsoup4
+selenium
+## Para la API de X antes Twitter 
+tweepy
+## Para la API de Google
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+google-generativeai
+## Para el análisis de sentimientos
+spacy
+transformers
+vaderSentiment
+SpacyTextBlob
+## Para las gráficas
+matplotlib       
+seaborn          
+plotly           
