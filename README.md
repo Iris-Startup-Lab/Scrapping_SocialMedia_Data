@@ -77,5 +77,4 @@ haga el scrapping de todas estas redes sociales anteriormente mencionadas.
 
 
 ## Tiempos
-Los tiempos de desarrollo aún no se han definido, pero esto se evaluará en conjunto con las demás personas integrantes del equipo de Iris.
-
+Usted puede ver los cambios en este [Timeline]() que hemos creado para una mejor comprensión de usted de los tiempos de ejecución de esta aplicación

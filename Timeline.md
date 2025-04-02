@@ -13,3 +13,7 @@
 - Se comenzó el script con Selenium y Beautiful Soup.
 
 - Facebook rechazó la app de prueba en Developers.
+
+**2025-03-26**
+- Se comenzó/finlizó el script de minado de YouTube
+- Se realizó el script de minado de Google Maps
