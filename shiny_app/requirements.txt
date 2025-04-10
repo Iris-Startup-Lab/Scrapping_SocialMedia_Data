@@ -1,8 +1,12 @@
-# Comenzando los requirements de Python
-## Para el backend
-Django
-firebase-admin
-## Para el web Scraping
+# Paquete principal para crear la Shiny App
+shiny
+python-dotenv
+# Paquetes para el chatbot
+chatlas>=0.4.0
+google-genai
+shiny
+tweepy
+## Paquetes para poder realizar el web scraping generalista
 scrapy 
 psycopg2-binary  
 requests         
@@ -22,7 +26,7 @@ vaderSentiment
 SpacyTextBlob
 nltk
 ## Para las gráficas
-matplotlib       
-seaborn          
-plotly           
+matplotlib
+seaborn       
+plotly          
 tqdm
