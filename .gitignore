@@ -1,6 +1,16 @@
 ### Comenzando el gitignore
 .env
+*.env
 /__pycache__
 /models
 /Uploaded_files
-.csv
+*.csv
+### Para todos los archivos post instalación de Django
+### Django
+*.log
+*.pot
+__pycache__/
+dist/
+tmp/
+.env
+.venv
