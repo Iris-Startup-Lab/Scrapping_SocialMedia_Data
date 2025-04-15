@@ -15,5 +15,17 @@
 - Facebook rechazó la app de prueba en Developers.
 
 **2025-03-26**
-- Se comenzó/finlizó el script de minado de YouTube
+- Se comenzó/finalizó el script de minado de YouTube
 - Se realizó el script de minado de Google Maps
+
+**2025-04-10**
+- Se comenzó el desarrollo de la app
+- Se instalaron Django y el entorno virtual en Anacoda
+
+**2025-04-11**
+- Se realizaron los primeros módulos en Django y se configuró el backend
+- Se instaló NodeJS y se hicieron pruebas para React
+
+**2025-04-14**
+- Se realizaron más cambios al backend y se eliminaron algunos bugs encontrados
+- Se editó el entorno de supabase 

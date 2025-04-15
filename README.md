@@ -77,4 +77,9 @@ haga el scrapping de todas estas redes sociales anteriormente mencionadas.
 
 
 ## Tiempos
-Usted puede ver los cambios en este [Timeline]() que hemos creado para una mejor comprensión de usted de los tiempos de ejecución de esta aplicación
+Usted puede ver los cambios en este [Timeline](./Timeline.md) que hemos creado para una mejor comprensión de usted de los tiempos de ejecución de esta aplicación
+
+## Desarrolladores:
+Iris Startup Lab
+Equipo Data & Analytics
+Fernando Dorantes Nieto
