@@ -11,6 +11,19 @@ from .models import RespuestaGemini
 @api_view(['POST'])
 
 def obtener_gemini_response(request):
+    """ En base a una función anterior, genera la respuesta de Gemini 
+
+     Parámetros
+     -----------------
+     request : str
+         Una cadena con cualquier pregunta para el llm
+
+     Returns/Retorna 
+     ----------
+     Una cadena simple o compleja de la respuesta del llm, 
+     al existir error pregunta sobre que se requiere
+     
+    """
     pregunta = request.data.get('pregunta')
     if pregunta:
         respuesta_texto = obtener_respuesta_gemini(pregunta)
@@ -22,6 +35,7 @@ def obtener_gemini_response(request):
         except RespuestaGemini.DoesNotExist:
             return Response({'respuesta': respuesta_texto})
     return Response({'error': 'Se requiere la pregunta.'}, status=400)
+
 
 
 
