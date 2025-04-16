@@ -4,7 +4,7 @@ from django.shortcuts import render
 # backend/chat/views.py
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .scripts.gemini_connector import obtener_respuesta_gemini
+from chat.scripts.gemini_connector import obtener_respuesta_gemini
 from .serializers import RespuestaGeminiSerializer
 from .models import RespuestaGemini
 
