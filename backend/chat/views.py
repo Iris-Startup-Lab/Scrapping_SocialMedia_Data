@@ -9,6 +9,7 @@ from .serializers import RespuestaGeminiSerializer
 from .models import RespuestaGemini
 
 @api_view(['POST'])
+
 def obtener_gemini_response(request):
     pregunta = request.data.get('pregunta')
     if pregunta:
@@ -21,3 +22,7 @@ def obtener_gemini_response(request):
         except RespuestaGemini.DoesNotExist:
             return Response({'respuesta': respuesta_texto})
     return Response({'error': 'Se requiere la pregunta.'}, status=400)
+
+
+
+
