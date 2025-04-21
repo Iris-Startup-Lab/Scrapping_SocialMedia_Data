@@ -35,21 +35,26 @@ def get_tweet_details(tweet_id, max_results=10):
                                              expansions=["author_id"], 
                                              user_fields=["username"],
                                              max_results=max_results)
+        
         users = {u["id"]: u for u in tweets.includes['users']}
         for tweet in tweets.data:
             tweet_url = f"https://twitter.com/{tweet.author_id}/status/{tweet.id}"
-            tweet_id = tweet.id,
-            username = users[tweet.author_id]["username"] if tweet.author_id in users else None,
-            tweet_text = tweet.text,
-            timestamp = tweet.created_at,
-            timestamp_iso = timestamp.isoformat()
+            tweet_id = tweet.id
+            username = users[tweet.author_id]["username"] if tweet.author_id in users else None
+            tweet_text = tweet.text
+            timestamp = tweet.created_at
+            print(f"Tipo de tweet.created_at: {type(timestamp)}")
+            print(timestamp)
+            #timestamp_iso = timestamp.isoformat()
             #today = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
             # Guardar los datos en la base de datos
+            ## Se guarda en la base de datos de Supabase
             Tweet.objects.create(
                 tweet_id = tweet_id,
                 user_id = tweet.author_id,
                 username = username,
-                created_at = timestamp_iso,
+                #created_at = timestamp_iso,
+                created_at = timestamp,
                 full_text = tweet_text,
                 url = tweet_url#,
                 #fecha_scraping = today
@@ -57,6 +62,7 @@ def get_tweet_details(tweet_id, max_results=10):
         print(f"Scraping listo para el tweet: {tweet_id}")
     except tweepy.TweepyException as e:
         print(f"Error al scraping del tweet: {e}") 
+
 
 
 
