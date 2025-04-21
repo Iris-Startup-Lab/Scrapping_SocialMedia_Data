@@ -6,8 +6,8 @@ from scraping.scripts.twitter_scraper import get_tweet_details
 class Command(BaseCommand):
     help = 'Scrapes tweets from Twitter (X) based on a tweet ID'
     def add_arguments(self, parser):
-        parser.add_argument('tweet_id', type=str, help='The search query for Twitter (X)')
-        parser.add_argument('--count', type=int, default=10, help='Number of tweets to scrape')
+        parser.add_argument('tweet_id', type=str, help='The tweet id to scrape')
+        parser.add_argument('--count', type=int, default=10, help='Number of tweets to scrape (Max 100)')
 
     def handle(self, *args, **options):
         query = options['tweet_id']
