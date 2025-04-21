@@ -9,8 +9,16 @@ from dotenv import  load_dotenv
 import time 
 from datetime import datetime, timedelta
 
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
+
 load_dotenv()
 
+##### test python manage.py scrape_twitter "1914271651962700018" --count 10
 
 # Configuración de la API de Twitter (X)
 # Reemplaza con tus propias credenciales de la API de Twitter (X)
@@ -64,7 +72,10 @@ def get_tweet_details(tweet_id, max_results=10):
         print(f"Error al scraping del tweet: {e}") 
 
 
-
+#### Función para tweets con web scraping tradicional ####
+def scrape_tweet_with_selenium(tweet_id):
+    ### TODO####
+    return None 
 
 def scrape_tweets(query, count=10):
     try:
