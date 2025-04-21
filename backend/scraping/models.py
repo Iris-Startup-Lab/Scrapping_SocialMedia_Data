@@ -5,7 +5,6 @@ class DatosWeb(models.Model):
     texto = models.TextField()
     url = models.URLField()
     fecha_scraping = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return self.texto[:50]
     
@@ -31,3 +30,17 @@ class TweetsList(models.Model):
     fecha_scraping = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f"{self.username} - {self.tweet_id}"
+
+### Ahora la clase para el análisis de sentimientos ###
+
+class ResultadoAnalisisSentimiento(models.Model):
+    tweet = models.ForeignKey(Tweet, 
+                              on_delete=models.CASCADE, 
+                              related_name='analisis_sentimientos')
+    texto_analizado = models.TextField()
+    sentimiento = models.CharField(max_length=50)  # Ejemplo: 'positivo', 'negativo', 'neutral'
+    score = models.FloatField(null=True, blank=True)  # Puntuación de confianza (opcional)
+    fecha_analisis = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return f"Análisis de sentimientos para '{self.texto_analizado[:50]}': {self.sentimiento}"
+
