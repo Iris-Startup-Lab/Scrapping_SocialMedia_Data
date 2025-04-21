@@ -11,6 +11,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os 
+import sys
+from dotenv import  load_dotenv
+
+load_dotenv()
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,6 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -74,16 +82,37 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "social_media_scraper.wsgi.application"
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:4200",  ## esto es para el frontend, se puede cambiar por el dominio de la app
+    "http://127.0.0.1:4200"
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # Permitir todos los orígenes (no recomendado para producción)
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+"""
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+"""
+DATABASES = {
+    "default":{
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',  
+        'USER': 'postgres.rdqtsoydvgxdbbvhnmlk',  
+        'PASSWORD': os.environ.get('supabase_pass'),  
+        'HOST': 'aws-0-us-east-1.pooler.supabase.com',    
+        'PORT': '5432'        
+    }
+}
+
+
 
 
 # Password validation
