@@ -1,6 +1,6 @@
 import os
 import spacy
-from transformers import pipeline, AutoModelForSequenceClassification, TFAutoModelForSequenceClassification
+from transformers import pipeline, AutoModelForSequenceClassification, TFAutoModelForSequenceClassification, AutoTokenizer
 from analysis.models import ResultadoAnalisisSentimiento
 from scraping.models import Tweet
 import tensorflow as tf
@@ -19,17 +19,20 @@ except OSError:
 #sentiment_pipeline_hf = pipeline("sentiment-analysis", model="finiteautomata/beto-sentiment-analysis", framework="pt") # Modelo BETO para español
 
 model_name = "finiteautomata/beto-sentiment-analysis"
+tokenizer= AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 #model = TFAutoModelForSequenceClassification.from_pretrained(model_name, from_pt=True) # Cargar el modelo BETO para español
-sentiment_pipeline_hf = pipeline("sentiment-analysis", model=model, tokenizer=model)
+sentiment_pipeline_hf = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 ## Tensorflow no soporta el modelo BETO para español, por lo que se utiliza PyTorch
+#sentiment_pipeline_hf = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer, device=0) # Si tienes GPU y quieres usarla, cambia device a 0
+## Añadiendo la alternativa de TensorFlow para evitar problemas de compatibilidad
 
-
+### La siguiente función aplica Spacy y Hugging Face para analizar el sentimiento de un tweet o texto generado por el web scraper
 def analizar_sentimiento_hibrido(tweet):
     texto = tweet.full_text
     sentimiento = None
     score = None
-
+    #tweet_id = tweet.tweet_id
     # Intentar análisis con Spacy
     if nlp_spacy:
         doc = nlp_spacy(texto)
@@ -43,6 +46,7 @@ def analizar_sentimiento_hibrido(tweet):
             print(f"Resultado no concluyente con Spacy para: '{texto[:50]}'. Intentando con Hugging Face.")
             # Si Spacy no es concluyente, intentar con Hugging Face
             resultado_hf = sentiment_pipeline_hf(texto)[0]
+            print("Pasa resultado")
             sentimiento = resultado_hf['label']
             score = resultado_hf['score']
     else:

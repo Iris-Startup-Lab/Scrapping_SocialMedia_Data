@@ -22,5 +22,6 @@ class ResultadoAnalisisSentimiento(models.Model):
     sentimiento = models.CharField(max_length=50)  
     score = models.FloatField(null=True, blank=True)  
     fecha_analisis = models.DateTimeField(auto_now_add=True)
+    #tweet_id = models.CharField(max_length=255, null=True, blank=True)  # ID del tweet asociado
     def __str__(self):
         return f"Análisis de sentimientos para '{self.texto_analizado[:50]}': {self.sentimiento}"
