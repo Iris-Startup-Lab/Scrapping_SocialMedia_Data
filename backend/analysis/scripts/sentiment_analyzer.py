@@ -1,18 +1,28 @@
+import os
 import spacy
-from transformers import pipeline
+from transformers import pipeline, AutoModelForSequenceClassification, TFAutoModelForSequenceClassification
 from analysis.models import ResultadoAnalisisSentimiento
 from scraping.models import Tweet
+import tensorflow as tf
 
-
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0" # Desactivar optimizaciones de oneDNN para evitar problemas de compatibilidad con TensorFlow y Hugging Face
 
 try:
-    nlp_spacy = spacy.load("es_core_news_sm")  # O el modelo de Spacy que prefieras
+    print("Cargando modelo de Spacy...")
+    # Cargar el modelo de Spacy en español
+    nlp_spacy = spacy.load("es_core_news_md")  ## Modelo no tan pesado
 except OSError:
     nlp_spacy = None
     print("Advertencia: No se pudo cargar el modelo de Spacy. Se utilizará Hugging Face.")
 
-sentiment_pipeline_hf = pipeline("sentiment-analysis", model="finiteautomata/beto-sentiment-analysis") # Modelo BETO para español
+#sentiment_pipeline_hf = pipeline("sentiment-analysis", model="finiteautomata/beto-sentiment-analysis") # Modelo BETO para español
+#sentiment_pipeline_hf = pipeline("sentiment-analysis", model="finiteautomata/beto-sentiment-analysis", framework="pt") # Modelo BETO para español
 
+model_name = "finiteautomata/beto-sentiment-analysis"
+model = AutoModelForSequenceClassification.from_pretrained(model_name)
+#model = TFAutoModelForSequenceClassification.from_pretrained(model_name, from_pt=True) # Cargar el modelo BETO para español
+sentiment_pipeline_hf = pipeline("sentiment-analysis", model=model, tokenizer=model)
+## Tensorflow no soporta el modelo BETO para español, por lo que se utiliza PyTorch
 
 
 def analizar_sentimiento_hibrido(tweet):

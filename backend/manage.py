@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+### THis is the manage.py file for the Django project ###
+# -*- coding: utf-8 -*-
+## Django creates this file automatically when you create a new project ##
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
