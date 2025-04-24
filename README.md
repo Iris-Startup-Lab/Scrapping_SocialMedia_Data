@@ -36,6 +36,11 @@ Esto con el lenguaje de programación Python.
 Los gráficos se realizarán con diversas librerías, principalmente [MatPlotLib](https://matplotlib.org/) y [Plotly](https://plotly.com/) 
 
 ## Redes Sociales objetivo
+### Cualquier web 
+Para el caso de cualquier sitio web. 
+Se deberá generar un proceso generalista donde se obtenga el texto.
+Se generen las frases más importantes, así como un resumen, se genere un análisis de sentimientos.
+Esto se guardará en base de datos como 2 factores: Frase y sentimiento, añadiendo la url del sitio web 
 
 ### Twitter (X)
 Para el caso de Twitter, se ha logrado tener acceso a través de 
