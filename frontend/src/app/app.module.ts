@@ -3,7 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { HttpClientModule } from '@angular/common/http'; // Import HttpClientModule
 import { RouterModule } from '@angular/router';
-
+import { FormsModule } from '@angular/forms'; 
 //import { AppRoutingModule } from './app-routing.module'; // Se elimina porque fue cambiado por el routes
 import { AppComponent } from './app.component';
 import { ScrapingComponent } from './scraping/scraping.component';
@@ -27,7 +27,8 @@ import { routes } from './app.routes'; // Importando el módulo de rutas
     //AppRoutingModule,
     //AppRoutes,
     HttpClientModule, // Add HttpClientModule to imports
-    SharedModule
+    SharedModule, 
+    FormsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

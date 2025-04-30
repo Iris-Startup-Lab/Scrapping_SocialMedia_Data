@@ -1,6 +1,7 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, Routes } from '@angular/router';
 import { ScrapingComponent } from './scraping/scraping.component';
+import { ChatComponent } from './chat/chat.component';
 import { provideHttpClient } from '@angular/common/http';
 //import { routes } from './app.routes';
 
@@ -8,6 +9,7 @@ import { provideHttpClient } from '@angular/common/http';
 
 export const routes: Routes = [
   { path: 'scraping', component: ScrapingComponent },
+  { path: 'chat', component: ChatComponent }, 
   { path: '', redirectTo: '/scraping', pathMatch: 'full' },
   // ... tus otras rutas
 ];

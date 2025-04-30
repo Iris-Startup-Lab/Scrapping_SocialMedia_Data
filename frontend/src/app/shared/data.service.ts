@@ -15,15 +15,14 @@ export class DataService {
   constructor(private http: HttpClient) { }
 
   getTweets(): Observable<any[]> {
-    console.log('Llamando a la API para obtener tweets...'); // Para depuración
+    console.log('Llamando a la API para obtener tweets...'); // Para debuggeo
     //return this.http.get<any[]>(this.apiUrl + 'datos-web/'); 
     return this.http.get<any[]>(this.apiUrl + 'tweet/'); 
     //return this.http.get<any[]>(this.apiUrl + 'resultados-analisis/'); // Cambiado a 'tweets/' para que coincida con la API
-
   }
 
   getSentimentResults(tweetIds: string[]): Observable<any[]> {
-    console.log('Llamando a la API para obtener resultados de sentimiento dentro de getSentimentResults...'); // Para depuración
+    console.log('Llamando a la API para obtener resultados de sentimiento dentro de getSentimentResults...'); 
     return this.http.post<any[]>(this.apiUrl + 'resultados-analisis-tweets/', { tweet_ids: tweetIds });
   }
 }

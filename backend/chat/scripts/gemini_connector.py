@@ -26,7 +26,7 @@ def obtener_respuesta_gemini(pregunta):
      ----------
      Una cadena simple o compleja de la respuesta del llm
     """
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
     response = model.generate_content(pregunta)
     RespuestaGemini.objects.create(pregunta=pregunta, respuesta=response.text)
     return response.text
