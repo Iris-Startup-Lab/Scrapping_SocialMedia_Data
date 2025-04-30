@@ -48,7 +48,7 @@ export class ScrapingComponent implements OnInit {
       (sentimentData) => {
         sentimentData.forEach(result => {
           console.log('Resultado del sentimiento:', result);
-          this.sentimentResults[result.tweet_id] = result; // Asumiendo que el backend devuelve 'tweet' como el tweet_id
+          this.sentimentResults[result.id] = result; // Asumiendo que el backend devuelve 'tweet' como el tweet_id
         });
         console.log('Resultados del análisis de sentimientos recibidos:', this.sentimentResults);
       },
