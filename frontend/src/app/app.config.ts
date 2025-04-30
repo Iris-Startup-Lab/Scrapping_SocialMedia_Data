@@ -1,8 +1,20 @@
 import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Routes } from '@angular/router';
+import { ScrapingComponent } from './scraping/scraping.component';
+import { provideHttpClient } from '@angular/common/http';
+//import { routes } from './app.routes';
 
-import { routes } from './app.routes';
+//import { ScrapingComponent } from './scraping/scraping.component';
+
+export const routes: Routes = [
+  { path: 'scraping', component: ScrapingComponent },
+  { path: '', redirectTo: '/scraping', pathMatch: 'full' },
+  // ... tus otras rutas
+];
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideZoneChangeDetection({ eventCoalescing: true }), provideRouter(routes)]
+  providers: [provideRouter(routes), provideHttpClient()]
+  //providers: [provideZoneChangeDetection({ eventCoalescing: true }), provideRouter(routes)]
 };
+
+console.log('Pasó el config'); // Para depuración

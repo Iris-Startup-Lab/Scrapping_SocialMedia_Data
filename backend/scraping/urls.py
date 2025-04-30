@@ -4,4 +4,5 @@ from . import views
 
 urlpatterns = [
     path('datos-web/', views.DatosWebList.as_view()),
+    path('tweet/', views.DatosWebList.as_view()),
 ]

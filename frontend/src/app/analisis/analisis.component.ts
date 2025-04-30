@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-analisis',
+  standalone: true,
   imports: [],
   template: `
     <p>

@@ -1,0 +1,25 @@
+<h2>Tweets Scraped</h2>
+<!--<app-scraping></app-scraping> -->
+<div *ngFor="let tweet of tweets">
+
+  <p><strong>Fecha Scraping:</strong> {{ tweet.fecha_scraping }}</p>
+  <p><strong>Text:</strong> {{ tweet.texto }}</p>
+  <p><strong>ID:</strong> {{ tweet.id}}</p>
+  <p><strong>TID:</strong> {{ tweet.tweet_id}}</p>
+  <p><strong>user ID:</strong> {{ tweet.user_id}}</p>
+
+  <p><strong>URL:</strong> <a [href]="tweet.url" target="_blank">{{ tweet.url }}</a></p>
+  <p>
+    <strong>Sentimiento:</strong>
+    <span *ngIf="sentimentResults[tweet.id]">
+      {{ sentimentResults[tweet.id]?.sentimiento }}
+      <!--<small *ngIf="sentimentResults[tweet.tweet_id]?.score">({{ sentimentResults[tweet.tweet_id]?.score | number:'1.2-2' }})</small>-->
+      <small *ngIf="sentimentResults[tweet.id]?.score">({{ sentimentResults[tweet.id]?.score | number:'1.2-2' }})</small>
+
+    </span>
+    <span *ngIf="!sentimentResults[tweet.id]">
+      Analizando...
+    </span>
+  </p>  
+  <hr>
+</div>
