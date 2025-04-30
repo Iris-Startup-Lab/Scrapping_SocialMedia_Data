@@ -34,7 +34,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 app_ui = ui.page_fixed(
     ui.layout_sidebar(
         ui.sidebar(
-            ui.img(src="./LogoNuevo.png", height='200', width='200'),
+            ui.img(src="LogoNuevo.png", height='200', width='200'),
             ui.markdown("Esta aplicación provisional permite extraer datos de diferentes fuentes y realizar un análisis de sentimientos. Se pueden extraer datos de Wikipedia, YouTube, Google Maps y Twitter (X)."),
             width=200
         )
