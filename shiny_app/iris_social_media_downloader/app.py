@@ -1,6 +1,6 @@
+###### Social Media Downloader Shiny App ######
 from shiny import App, render, ui
 import shinyswatch
-
 import requests
 from bs4 import BeautifulSoup
 from googleapiclient.discovery import build
@@ -43,18 +43,18 @@ app_ui = ui.page_fixed(
     ui.navset_tab(
         ui.nav_panel(
             "Wikipedia",
-            ui.input_text("wikipedia_url", "URL de Wikipedia:", value="https://es.wikipedia.org/wiki/Python_(lenguaje_de_programaci%C3%B3n)"),
+            ui.input_text("wikipedia_url", "URL de Wikipedia:", value="https://es.m.wikipedia.org/wiki/Agapornis"),
             ui.output_text("wikipedia_content")
         ),
         ui.nav_panel(
             "YouTube",
-            ui.input_text("youtube_url", "URL del video de YouTube:", value="https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+            ui.input_text("youtube_url", "URL del video de YouTube:", value="https://www.youtube.com/watch?v=nwzJpHUGRno"),
             ui.output_text("youtube_info"),
             ui.output_text("youtube_comments")
         ),
         ui.nav_panel(
             "Google Maps",
-            ui.input_text("maps_query", "Buscar lugar en Google Maps:", value="Ciudad de México"),
+            ui.input_text("maps_query", "Buscar lugar en Google Maps:", value="Av. de los Insurgentes Sur 3579, La Joya, Tlalpan, 14000 Ciudad de México, CDMX"),
             ui.output_text("maps_info"),
             ui.output_text("maps_comments")
         ),
@@ -75,7 +75,7 @@ app_ui = ui.page_fixed(
         ),
         ui.nav_panel(
             "Chat con Gemini",
-            ui.input_text("gemini_prompt", "Pregunta a Gemini:", value="Cuéntame algo interesante sobre Python."),
+            ui.input_text("gemini_prompt", "Pregunta a Gemini:", value="Cuéntame algo interesante sobre los agapornis."),
             ui.output_text("gemini_response")
         )
     ),
@@ -244,7 +244,7 @@ def server(input, output, session):
         except Exception as e:
             return f"Error al obtener respuestas: {e}"
 
-    summarizer = pipeline("summarization", model = "facebook/bart-large-cnn")
+
     ''' Resumir el contenido de todo'''        
     @output
     @render.text
@@ -253,6 +253,8 @@ def server(input, output, session):
         return None
     '''
     def summary_output():
+        summarizer = pipeline("summarization", model = "facebook/bart-large-cnn")
+        #summarizer = pipeline("summarization", model="ELiRF/mt5-base-dacsa-es")
         all_text_to_summarize = ""
         wikipedia_text = input.wikipedia_content()
         print(f"Contenido wikipedia:\n{wikipedia_text[:200]}") 
@@ -307,9 +309,9 @@ def server(input, output, session):
             #return "Modelo de NLP no cargado."
             #return ui.output_text("sentiment_error", "Modelo de NLP no cargado.") 
         all_text_to_analyze ={
-            "Comentarios de YouTube": input.youtube_comments(),
-            "Comentarios de Google Maps": input.maps_comments(),
-            "Posts de Twitter": input.twitter_posts(),
+            #"Comentarios de YouTube": input.youtube_comments(),
+            #"Comentarios de Google Maps": input.maps_comments(),
+            #"Posts de Twitter": input.twitter_posts(),
             "Texto de Wikipedia": input.wikipedia_content()            
         }
         print(f"Texto a analizar en sentimientos: {all_text_to_analyze}")
