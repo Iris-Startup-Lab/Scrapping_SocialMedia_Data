@@ -10,7 +10,8 @@
 *.log
 *.pot
 __pycache__/
+.vscode/
+*.pyc
 dist/
 tmp/
-.env
 .venv
