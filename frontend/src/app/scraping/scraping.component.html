@@ -1,5 +1,7 @@
+<!--<app-scraping></app-scraping> --><!--Esto va después del h2 original-->
+<!--
 <h2>Tweets Scraped</h2>
-<!--<app-scraping></app-scraping> -->
+
 <div *ngFor="let tweet of tweets">
 
   <p><strong>Fecha Scraping:</strong> {{ tweet.fecha_scraping }}</p>
@@ -13,7 +15,6 @@
     <strong>Sentimiento:</strong>
     <span *ngIf="sentimentResults[tweet.id]">
       {{ sentimentResults[tweet.id]?.sentimiento }}
-      <!--<small *ngIf="sentimentResults[tweet.tweet_id]?.score">({{ sentimentResults[tweet.tweet_id]?.score | number:'1.2-2' }})</small>-->
       <small *ngIf="sentimentResults[tweet.id]?.score">({{ sentimentResults[tweet.id]?.score | number:'1.2-2' }})</small>
 
     </span>
@@ -21,5 +22,54 @@
       Analizando...
     </span>
   </p>  
+  <hr>
+</div>
+-->
+
+<h2> Social Media Scraper</h2>
+<div>
+  <h3>Elige la red social a minar:</h3>
+  <label>
+    <input type="radio", name="socialNetwork", value="twitter", [(ngModel)]="selectedSocialNetwork"> OX (Twitter/X) >
+  </label>
+</div>
+
+<div>
+  <h3>Pega término de búsqueda:</h3>
+  <input type="text" [(ngModel)]="searchQuery" placeholder="Ej. 'Angular framework', '#coding'">
+</div>
+
+<button (click)="analyzeData()" [disabled]="!selectedSocialNetwork || !searchQuery">Analizar</button>
+
+<div *ngIf="loading">
+  <p>Analizando datos... por favor espera.</p>
+</div>
+
+<div *ngIf="analysisResults">
+  <h3>Resumen del Resultado</h3>
+  <p>Tweets analizados: {{ analysisResults.totalTweets }}</p>
+  <p>Positivos: {{ analysisResults.positiveCount }}</p>
+  <p>Negativos: {{ analysisResults.negativeCount }}</p>
+  <p>Neutrales: {{ analysisResults.neutralCount }}</p>
+</div>
+
+<hr>
+
+<h3>Tweets Scraped</h3>
+<div *ngFor="let tweet of tweets">
+  <p><strong>Fecha Scraping:</strong> {{ tweet.fecha_scraping }}</p>
+  <p><strong>Text:</strong> {{ tweet.texto }}</p>
+  <p><strong>ID:</strong> {{ tweet.id}}</p>
+  <p><strong>URL:</strong> <a [href]="tweet.url" target="_blank">{{ tweet.url }}</a></p>
+  <p>
+    <strong>Sentimiento:</strong>
+    <span *ngIf="sentimentResults[tweet.id]">
+      {{ sentimentResults[tweet.id]?.sentimiento }}
+      <small *ngIf="sentimentResults[tweet.id]?.score">({{ sentimentResults[tweet.id]?.score | number:'1.2-2' }})</small>
+    </span>
+    <span *ngIf="!sentimentResults[tweet.id]">
+      Analizando...
+    </span>
+  </p>
   <hr>
 </div>
