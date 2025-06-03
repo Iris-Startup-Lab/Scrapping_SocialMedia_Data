@@ -32,4 +32,4 @@ def obtener_respuesta_gemini(pregunta):
     return response.text
 
 if __name__ == "__main__":
-    obtener_respuesta_gemini('¿Cuál es el sentimiento general?')
+        obtener_respuesta_gemini('¿Cuál es el sentimiento general?')

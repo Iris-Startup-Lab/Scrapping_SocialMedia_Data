@@ -1,0 +1,55 @@
+/* Estilos para el chat */
+.chat-container {
+    padding: 15px;
+}
+
+.message-row {
+    margin-bottom: 15px;
+    clear: both;
+    overflow: auto; /* Helps contain floated children */
+}
+
+.user-message {
+    background-color: #00bc8c; /* Teal accent, common in dark themes */
+    color: white;
+    border-radius: 18px 18px 0px 18px; /* Consistent radius */
+    padding: 10px 15px;
+    float: right;
+    max-width: 80%;
+}
+
+.assistant-message {
+    background-color: #343a40; /* Darker grey, fits dark themes */
+    color: #e9ecef; /* Light grey text for contrast */
+    border-radius: 18px 18px 18px 0px; /* Consistent radius */
+    padding: 10px 15px;
+    float: left;
+    max-width: 80%;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    clear: both;
+}
+
+/* Efecto de máquina de escribir */
+.typewriter {
+    border-right: 3px solid;
+    white-space: nowrap;
+    overflow: hidden;
+    animation: typing 1s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+@keyframes typing {
+    from { width: 0 }
+    to { width: 100% }
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: #00bc8c; } /* Match user message accent */
+}
