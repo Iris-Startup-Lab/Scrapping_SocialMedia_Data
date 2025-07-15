@@ -53,3 +53,144 @@
     from, to { border-color: transparent }
     50% { border-color: #00bc8c; } /* Match user message accent */
 }
+
+
+/* styles.css - Añadir al final del archivo */
+
+/* Ajustes específicos para el panel de login */
+.login-panel-column .panel-well { /* Target el panel-well dentro de la columna de login */
+    padding-top: 15px;    /* Reduce el padding superior del panel. Ajusta según sea necesario. */
+    padding-bottom: 15px; /* Reduce el padding inferior del panel. Ajusta según sea necesario. */
+}
+
+.login-panel-column .login-logo-container {
+    margin-bottom: 5px; /* Espacio DESPUÉS del div de los logos, ANTES del primer HR */
+    font-size: 0; /* Truco para eliminar espacios entre elementos inline-block */
+}
+
+/* Divs que envuelven directamente a ui.output_image("logo1") y ui.output_image("logo2") - ahora con clase "logo-wrapper" */
+.login-panel-column .login-logo-container .logo-wrapper {
+    display: inline-block;
+    vertical-align: middle; /* Alinea los logos si tienen alturas ligeramente diferentes */
+    margin-right: 8px; /* Espacio entre los logos */
+    font-size: initial; /* Restaura el tamaño de fuente para el contenido dentro del wrapper */
+}
+
+.login-panel-column .login-logo-container .logo-wrapper:last-child {
+    margin-right: 0; /* Sin margen para el último logo */
+}
+
+/* Contenedor DIV generado por ui.output_image para los logos */
+/* Este es el div con id="logo1" o id="logo2" */
+.login-panel-column .login-logo-container .logo-wrapper .shiny-image-output {
+    width: auto !important; /* Que la imagen defina el ancho */
+    height: 35px !important; /* Igual a la altura de la imagen deseada */
+    display: inline-block !important; /* Hacemos este div inline-block */
+    vertical-align: middle; /* Para alinearlo con otros elementos inline-block */
+    /* line-height: 35px; */ /* Puede ayudar a la alineación vertical, pero la imagen debería llenar la altura */
+    overflow: hidden; /* Para asegurar que no se expanda si el contenido es más grande que height/width */
+}
+
+/* La etiqueta <img> real dentro del contenedor del logo */
+.login-panel-column .login-logo-container .logo-wrapper .shiny-image-output img {
+    display: block !important; /* Hace que la imagen sea un bloque dentro de su contenedor */
+    height: 100% !important; /* Que llene la altura de 35px de su padre (.shiny-image-output) */
+    width: auto !important;   /* Ancho automático para mantener proporción */
+}
+
+.login-panel-column .panel-well hr {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.login-panel-column .panel-well h1 {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.login-panel-column .panel-well h2 {
+    margin-top: 5px;
+    margin-bottom: 8px; /* Un poco más de espacio antes del icono */
+}
+
+.login-panel-column .login-icon-container {
+    margin-top: 8px;
+    margin-bottom: 0px; /* Espacio DESPUÉS del div del icono, ANTES del H3 */
+}
+
+/* Contenedor DIV generado por ui.output_image para el ICONO */
+.login-panel-column .login-icon-container .shiny-image-output {
+    width: auto !important; 
+    height: 300px !important; /* Igual a la altura de la imagen del icono deseada */
+    display: inline-block !important; /* Para que se pueda centrar con text-align en su padre */
+    vertical-align: middle;
+    overflow: hidden;
+}
+
+/* La etiqueta <img> real dentro del contenedor del ICONO */
+.login-panel-column .login-icon-container .shiny-image-output img {
+    display: block !important;
+    height: 100% !important; 
+    width: auto !important;   
+}
+
+.login-panel-column .panel-well h3 { /* El H3 "Acceso Social Media Downloader" */
+    margin-top: 5px;
+    margin-bottom: 8px;
+}
+
+/* Ajustes para el mensaje de login si es necesario */
+.login-panel-column .panel-well .shiny-text-output { /* Asumiendo que texto_mensaje_login es un shiny-text-output */
+    margin-top: 8px; /* Espacio antes del mensaje de error/éxito del login */
+    margin-bottom: 0; /* Sin margen inferior extra si es el último elemento */
+}
+
+.login-logo-container {
+    margin: 0;
+    padding: 0;
+    line-height: 0; /* Esto ayuda a eliminar espacios fantasma entre elementos inline-block */
+}
+
+
+.login-logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* Espacio controlado entre logos */
+}
+.login-icon-container {
+    margin: 5px 0; /* Reduce el margen vertical */
+    padding: 0;
+}
+
+.shiny-image-output {
+    display: block;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.shiny-image-output img {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.logo-wrapper {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 5px 0 0; /* Solo margen derecho entre logos */
+    padding: 0;
+    line-height: 0;
+}
+
+.login-panel-column hr {
+    margin: 5px 0;
+}
+
+.login-panel-column h1, 
+.login-panel-column h2, 
+.login-panel-column h3 {
+    margin: 5px 0;
+    line-height: 1.2;
+}
