@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
+## Iris Startup Lab 
+'''
+<(*)
+  ( >)
+  /|
+'''
+
 #-------------------------------------------------------------
 ######### Social Media Downloader Shiny App ######
 ######### VERSION 0.5 ######
+######### Authors Fernando Dorantes Nieto
 #-------------------------------------------------------------
 
 
 #"cd .\Local\scripts\Social_media_comments\shiny_app\iris_social_media_downloader"
 #### Add Pinecone and the button of comments
-#### Change the google.generative api to the newest
 
-##### Importando librerías
+##### Importando librerías generales y principales
 import os 
 ### Para directorios
 from pathlib import Path
@@ -122,6 +129,7 @@ import ast
 from typing import Any, Dict, List as TypingList 
 import json 
 from functools import partial 
+from datetime import datetime, timezone
 #from shared import app_dir, tips
 #### Librerías para análisis de datos y llamado de datos
 import numpy as np 
@@ -135,7 +143,8 @@ from shinywidgets import output_widget, render_widget, render_plotly # xui impor
 from plotly.subplots import make_subplots
 from PIL import Image 
 from pyvis.network import Network
-
+import base64
+import io
 
 #### Librerías para web scraping 
 from bs4 import BeautifulSoup
@@ -145,7 +154,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.service import Service
+from selenium_stealth import stealth 
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import StaleElementReferenceException
+
 from google_play_scraper import app as play_app, reviews as play_reviews, Sort, reviews_all, search
+import html
 
 
 #### Librerías para uso de las API's oficiales
@@ -184,66 +200,96 @@ logger = logging.getLogger(__name__)
 
 #### Librerías para bases de datos
 from pinecone import Pinecone, ServerlessSpec
+from supabase import create_client, Client
+from supabase.lib.client_options import ClientOptions
+import psycopg2
+from psycopg2.extras import execute_values
+from sqlalchemy import create_engine
+
+#### Librerías para exportar a excel
+
+import  openpyxl
+import xlsxwriter
+### Librería para generar UUID para la sesión
+import uuid
 
 
-#from crawl4ai import WebCrawler 
-## Notas de bugs 
-## Funciona todo menos platform inputs
+import random 
+from datetime import datetime, timedelta
+import time 
+
+### LLamando a los scripts de ayuda// Calling helper scripts
+from config import * ### Script con secretos y también ligas a Chrome Driver etc 
+from scrapers.webpage_scrapers import _maps_comments, _get_youtube_channels_and_comments, _get_tweets_from_twitter_api
+from large_and_small_models.gemini_model_and_functions import _ensure_gemini_model, topics_generator, current_gemini_response, gemini_embeddings_model, gemini_model_instance
 
 
-load_dotenv()
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
-MAPS_API_KEY = os.environ.get("MAPS_API_KEY")
-TWITTER_API_KEY = os.environ.get("TWITTER_API_KEY")
-TWITTER_API_SECRET = os.environ.get("TWITTER_API_SECRET")
-TWITTER_ACCESS_TOKEN = os.environ.get("TWITTER_ACCESS_TOKEN")
-TWITTER_ACCESS_SECRET = os.environ.get("TWITTER_ACCESS_SECRET")
-TWITTER_BEARER_TOKEN = os.environ.get("TWITTER_BEARER_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-REDDIT_CLIENT_ID = os.environ.get("REDDIT_CLIENT_ID")
-REDDIT_CLIENT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET")
-REDDIT_USER_AGENT = os.environ.get("REDDIT_USER_AGENT")
-DETECT_LANGUAGE_API_KEY = os.environ.get("DETECT_LANGUAGE_API_KEY")
-OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "iris-gemini-chat") 
-EMBEDDING_DIMENSION = 768 # Para models/embedding-001 de Gemini
+################## Mensajes generales y funciones de ayuda ###########
+random.seed(42)  
 
-
-print(f'Este es el sistema ooerativo: {os.name}')
-
-if os.name == 'nt':  # Windows
-    CHROME_DRIVER_PATH  = os.getenv("CHROME_DRIVER_PATH_WINDOWS")
-    print(f"Este es el directorio para Chrome: {CHROME_DRIVER_PATH}")
-elif os.name == 'posix':  # Linux o macOS
-    CHROME_DRIVER_PATH  = os.getenv("CHROME_DRIVER_PATH_LINUX")
-    print(f"Este es el directorio para Chrome: {CHROME_DRIVER_PATH}")
-else: 
-    CHROME_DRIVER_PATH  = 'user/bin/chromedriver' 
-    print(f"Este es el directorio para Chrome: {CHROME_DRIVER_PATH}")
+print(f"PostgreSQL Host configured: {'Yes' if PG_HOST else 'No'}")
+print(f"PostgreSQL User configured: {'Yes' if PG_USER else 'No'}")
 
 
 
-# List of common User-Agents to rotate
-user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-]
 
-#logo_path = os.path.join(os.path.dirname(__file__), "www", "LogoNuevo.png")
-here = Path(__file__).parent
+# --- Helper functions for dynamic table creation ---
+def pandas_dtype_to_pg(dtype):
+    """Converts a pandas dtype to a PostgreSQL data type string."""
+    if pd.api.types.is_integer_dtype(dtype):
+        return "BIGINT"
+    elif pd.api.types.is_float_dtype(dtype):
+        return "DOUBLE PRECISION"
+    elif pd.api.types.is_bool_dtype(dtype):
+        return "BOOLEAN"
+    elif pd.api.types.is_datetime64_any_dtype(dtype):
+        return "TIMESTAMP WITHOUT TIME ZONE"
+    elif pd.api.types.is_string_dtype(dtype) or pd.api.types.is_object_dtype(dtype):
+        return "TEXT"
+    else:
+        return "TEXT" 
 
-DOMINIOS_PERMITIDOS = ['elektra.com.mx', 'dialogus.com.mx', 'tecnologiaaccionable.mx']
+def get_create_table_sql(df_for_schema, qualified_table_name, has_input_reference_col, has_session_id_col):
+    """Generates a CREATE TABLE IF NOT EXISTS SQL statement from a DataFrame."""
+    columns_defs = []
+    ## Añadiendo el UUID
+    columns_defs.append("id UUID PRIMARY KEY DEFAULT gen_random_uuid()")
+
+    if has_input_reference_col:
+        columns_defs.append("input_reference TEXT")
+
+    if has_session_id_col:
+        columns_defs.append("session_id TEXT")
+    
+
+    for col_name, dtype in df_for_schema.dtypes.items():
+        pg_type = pandas_dtype_to_pg(dtype)
+        columns_defs.append(f'"{col_name}" {pg_type}') # Quote column names
+    
+    columns_sql = ",\n    ".join(columns_defs)
+    create_sql = f"""CREATE TABLE IF NOT EXISTS {qualified_table_name} (
+    {columns_sql}
+);"""
+    return create_sql
+
+
+
+    
+
+
+        
+
+# --- End Helper functions ---
+
+
+
 
 #### Comenzando la UI/Frontend
 app_ui = ui.page_fixed(
     ui.tags.head(
-        ui.tags.link(rel="stylesheet", href="styles.css"), # Your existing stylesheet
+        #ui.tags.link(rel="stylesheet", href="./www/styles.css"), # El archivo css de estulos
+        #ui.tags.link(rel="stylesheet", href=(Path(__file__).parent / "www/styles.css") ), # El archivo css de estulos
+
         ui.tags.link( # Agregando esto para font awesome y los íconos
             rel="stylesheet",
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" # Or a specific version bundled with your theme
@@ -256,8 +302,24 @@ app_ui = ui.page_fixed(
                         e.preventDefault(); // Prevent default Enter behavior (like adding a new line)
                         $('#ask_gemini').click(); // Trigger the button click
                     }
-                });
-            });            
+                //});
+            }); 
+            // Nuevo para el handling de login para Enter en inicio de sesión           
+            $('#email_login, #password_login').on('keypress', function(e){
+                if(e.which == 13){
+                    e.preventDefault();
+                    $('#boton_login').click();
+                }
+            });
+            // Asegurando que deban escribir contraseña para poder dar enter
+            $('#password_login').on('keypress', function(e){
+                if(e.which == 13){
+                    e.preventDefault();
+                    $('#boton_login').click();
+                }
+            });
+        });
+
         """)
     ),
     #ui.tags.link(rel="stylesheet", href="styles.css"),
@@ -400,7 +462,9 @@ app_ui = ui.page_fixed(
     #### """ui antiguo"""
     ui.output_ui("ui_app_dinamica"),
     #theme=shinyswatch.theme.darkly()
-    theme=shinyswatch.theme.minty()
+    #theme=shinyswatch.theme.minty()
+    theme=shinyswatch.theme.zephyr()
+
 )
 
 #### Comenzando el server/Backend
@@ -408,15 +472,15 @@ def server(input, output, session):
     # Variables reactivas para la autenticación
     usuario_autenticado = reactive.Value(None)
     mensaje_login = reactive.Value("")
+    #same_network_comparison_data_r = reactive.Value(None)
     # Configuración inicial de las variables para el server
     ## Lazy Load o Carga del Perezoso
     pinecone_client = reactive.Value(None)
     pinecone_index_instance = reactive.Value(None)
     processed_dataframe = reactive.Value(pd.DataFrame())
-    #current_gemini_response = reactive.Value("Escribe tu pregunta y presiona enviar")
-    current_gemini_response = reactive.Value("Carga datos y luego haz una pregunta sobre ellos, o haz una pregunta general. Presiona Enter o el botón verde a la izquierda para activar el bot")
-    gemini_embeddings_model = reactive.Value(None)
-    gemini_model_instance= reactive.Value(None)
+    #current_gemini_response = reactive.Value("Carga datos y luego haz una pregunta sobre ellos, o haz una pregunta general. Presiona Enter o el botón verde a la izquierda para activar el bot")
+    #gemini_embeddings_model = reactive.Value(None)
+    #gemini_model_instance= reactive.Value(None)
     spacy_nlp_sentiment = reactive.Value(None)
     pysentimiento_analyzer_instance = reactive.Value(None)
     pysentimiento_emotions_analyzer_instance = reactive.Value(None)    
@@ -429,26 +493,119 @@ def server(input, output, session):
     topic_pipeline_instance =  reactive.Value(None)
     map_coordinates = reactive.Value(None)
     mind_map_html = reactive.Value(None)
-    
+    options = ClientOptions().replace(schema="iris_scraper") # If you need to modify default options
+    client = create_client(SUPABASE_URL, SUPABASE_KEY, options=options)
+    supabase_client_instance = reactive.Value(None)
+    psycopg2_conn_instance = reactive.Value(None)
+    active_comparison_session_id = reactive.Value(None)
+    # Reactives para el módulo de comparación
+    comparison_data_r = reactive.Value(None) # Almacenará el dict de DFs
+    comparison_summary_r = reactive.Value("")
+    comparison_chat_history_r = reactive.Value([]) # Para el chatbot comparativo
+    infographic_status_r = reactive.Value("")
+ 
+     # Reactive Values for Same-Network Comparison Module
+    same_network_comparison_data_r = reactive.Value(None)
+    same_network_comparison_summary_r = reactive.Value("")
+    same_network_comparison_chat_history_r = reactive.Value([])
+    same_network_infographic_status_r = reactive.Value("")
+    #supabase_client_instance.set(client)
+
     # --- Comenzando la lógica para autenticación
     def ui_login_form():
         """Retorna la UI para el formulario de login."""
         return ui.div(
             ui.row(
                 ui.column(4,
-                          ui.panel_well(
-                              ui.h3("Acceso Social Media Downloader", style="text-align: center;"),
-                              ui.hr(),
-                              ui.input_text("email_login", "Correo Electrónico:", placeholder="usuario@dominio.com"),
-                              ui.input_action_button("boton_login", "Ingresar", class_="btn-primary btn-block"),
+                          ui.panel_well(   # Añadimos una clase para targeting específico en CSS
+                              ui.hr(), # Estilos de hr se manejarán en CSS
+                              ui.h1("Iris Startup Lab", style="text-align: center; font-size: 2em;"), 
+                              ui.h1("Presenta:", style="text-align: center; font-size: 0.8em;"), 
+                              ui.h1('"ChismesitoGPT"', style="text-align: center; font-size: 1.5em; font-weight: bold;"), 
+                              ui.h1("Obten datos de la web y redes sociales + IA", style="text-align: center; font-size: 0.8em;"), 
+                              #ui.output_image("icon"),
+                              ui.div(
+                                  #ui.img(src=str(Path(__file__).parent / "www/Icon_chismoso_Gemini.png"), style="height: 60px; display: block; margin-left: auto; margin-right: auto; margin-top: 10px; margin-bottom: 10px;"), # Ajusta la ruta y el estilo
+                                  ui.output_image("icon"),
+                                  style="text-align: center;", class_="login-icon-container" 
+                              ),
+                              ui.h3("Acceso:", style="text-align: center; font-size: 1.2em;"), 
+                              ui.hr(), # Estilos de hr se manejarán en CSS
+                              ui.input_text("email_login", "Correo Electrónico:", placeholder="tucorreoelectronico@elektra/dialogus"),
+                              ui.input_password("password_login", "Contraseña (No. Empleado):", placeholder="Tu número de empleado"),                              
+                              #ui.input_action_button("boton_login", "Ingresar", class_="btn-primary btn-block"),
+                              ui.input_action_button("boton_login", "Ingresar", class_="btn-primary btn-block mt-2"), # mt-2 para un poco de margen
                               ui.output_text("texto_mensaje_login"),
+                              ui.hr(), 
+                              ui.div( # Contenedor principal para los logos, centrado
+                                  ui.div(ui.output_image("logo1"), style="display: inline-block; vertical-align: middle; margin-right: 10px;"),
+                                  #ui.div(ui.output_image("logo2"), style="display: inline-block; vertical-align: middle;"),
+                                  #ui.div(ui.output_image("logo1")),
+                                  #ui.div(ui.output_image("logo2")),
+                                  style="text-align: center;", class_="login-logo-container" 
+                              ),                              
                               style="color: #00968b; margin-top: 10px; text-align: center;"
+                              
                           ),
-                        offset=4
+                        offset=4,
+                        class_="login-panel-column" # Clase para la columna si es necesario
                 ) # Fin ui.column
             ),
             style="margin-top: 100px;"
         )
+
+    @render.image
+    def logo1():
+        from shiny.types import ImgData
+        dir = Path(__file__).resolve().parent
+        #img: ImgData = {"src": str(dir / "www/LogoNuevo.png"), "width": "100px; height: 50px; display: inline-block; margin-right: 1px;"}
+        img: ImgData = {
+            #"src": str(dir / "www/LogoNuevo.png"), 
+            "src": str(dir / "www/Logos_GS_Iris.png"),
+            "alt": "Logo 1",
+            "style": "height: 70px; width: auto;" # Más pequeño, display se maneja en el div contenedor
+        }        
+        return img 
+    
+    @render.image
+    def logo2():
+        from shiny.types import ImgData
+        dir = Path(__file__).resolve().parent
+        #img: ImgData = {"src": str(dir / "www/GSNuevo.png"), "width": "100px; height: 50px; display: inline-block; margin-right: 1px;"}
+        img: ImgData = {
+            "src": str(dir / "www/GSNuevo.png"), 
+            "alt": "Logo 2",
+            "style": "height: 35px; width: auto;" # Más pequeño, display se maneja en el div contenedor
+        }        
+        return img 
+
+    @render.image
+    def icon():
+        from shiny.types import ImgData
+        dir = Path(__file__).resolve().parent
+        img: ImgData = {
+            "src": str(dir / "www/Icon_chismoso_Gemini2.png"), 
+            "alt": "Icon",
+            "style": "height: 300px; width: auto; display: block; margin-left: auto; margin-right: auto;" # Un poco más pequeño, display block para centrarlo solo
+        }        
+        return img 
+
+
+    @output
+    @render.text
+    def current_session_id_display():
+        session_id = active_comparison_session_id.get()
+        if session_id:
+            return f"ID Sesión Comparación: {session_id[:8]}..." # Muestra una parte
+        return "No hay sesión de comparación activa."
+
+    # Efecto para limpiar la sesión de comparación
+    @reactive.Effect
+    @reactive.event(input.clear_comparison_session)
+    def _clear_session():
+        active_comparison_session_id.set(None)
+        ui.notification_show("Sesión de comparación limpiada.", duration=3)    
+    
 
     @output
     @render.text
@@ -459,10 +616,13 @@ def server(input, output, session):
     @reactive.event(input.boton_login)
     def manejar_intento_login():
         email = input.email_login()
+        password_str = input.password_login() 
+
         if not email:
             mensaje_login.set("Por favor, ingrese su correo electrónico.")
             return
-
+        
+        """
         try:
             nombre_usuario, dominio = email.strip().lower().split('@')
             if dominio in DOMINIOS_PERMITIDOS:
@@ -472,12 +632,60 @@ def server(input, output, session):
             else:
                 mensaje_login.set("Dominio de correo no autorizado.")
                 usuario_autenticado.set(None)
+                
         except ValueError:
             mensaje_login.set("Formato de correo electrónico inválido.")
             usuario_autenticado.set(None)
         except Exception as e:
             mensaje_login.set(f"Error inesperado durante el login: {e}")
             usuario_autenticado.set(None)
+        """
+        if not password_str:
+            mensaje_login.set("Por favor, ingrese su contraseña.")
+            return
+        
+        if not _ensure_psycopg2_connection():
+            mensaje_login.set("Error de conexión a Postgresql")
+            return 
+        #conn = psycopg2.conn_instance.get()
+        conn  = psycopg2_conn_instance.get()
+        cursor = None 
+        try:
+            cursor = conn.cursor()
+            # La tabla es iris_scraper.iris_email_employees_enabled
+            # Columnas: email (text), name (text), no_employee (bigint)
+            sql_query = "SELECT name, no_employee FROM iris_scraper.iris_email_employees_enabled WHERE email = %s"
+            cursor.execute(sql_query, (email.strip().lower(),))
+            result = cursor.fetchone()
+
+            if result:
+                db_name, db_no_employee = result # db_no_employee es bigint
+                
+                # Comparamos la contraseña ingresada (string) con el no_employee de la BD (convertido a string)
+                if str(db_no_employee) == password_str:
+                    usuario_autenticado.set(db_name if db_name else email.split('@')[0]) # Usar el nombre de la BD o el prefijo del email
+                    mensaje_login.set("")
+                    ui.notification_show(f"¡Bienvenido, {usuario_autenticado.get()}!", type="message", duration=5)
+                else:
+                    mensaje_login.set("Contraseña incorrecta.")
+                    usuario_autenticado.set(None)
+            else:
+                mensaje_login.set("Correo electrónico no encontrado o no autorizado.")
+                usuario_autenticado.set(None)
+        except psycopg2.Error as db_err:
+            print(f"Error de base de datos durante el login: {db_err}")
+            mensaje_login.set("Error al verificar credenciales. Intente más tarde.")
+            usuario_autenticado.set(None)
+        except Exception as e:
+            print(f"Error inesperado durante el login: {e}")
+            mensaje_login.set(f"Error inesperado durante el login: {e}")
+            usuario_autenticado.set(None)
+        finally:
+            if cursor:
+                cursor.close()
+            # No cerramos la conexión global aquí, se reutiliza.
+            # Si la conexión falla, _ensure_psycopg2_connection la reseteará en el próximo intento.
+
 
     @reactive.Effect
     @reactive.event(input.boton_logout) # Necesitarás añadir este botón en tu UI principal
@@ -491,7 +699,7 @@ def server(input, output, session):
             ui.notification_show("Sesión cerrada.", type="message", duration=5)
 
 
-    # --- UI Principal de la Aplicación (tu UI original reestructurada) ---
+    # --- UI Principal de la Aplicación-
     @reactive.Calc
     def ui_principal_app():
         """Retorna la UI principal de la aplicación cuando el usuario está autenticado."""
@@ -501,8 +709,12 @@ def server(input, output, session):
                 width=350
             ),
             ui.navset_card_tab( # Pestañas principales
+                nav_panel_comparacion_misma_red(),
                 nav_panel_base_datos_y_chatbot(),
                 nav_panel_analisis_y_visualizaciones(),
+                #nav_panel_comparison_module(), # Nueva pestaña de comparación
+                nav_panel_cross_source_comparison(),
+                #nav_panel_modulo_comparacion(), 
                 nav_panel_scraper_tablas_chatbot(),
                 id="pestana_principal_seleccionada"
             )
@@ -529,12 +741,26 @@ def server(input, output, session):
                 ui.hr(),
                 ui.input_text_area("scraper_urls", "URLs a Scrapear (una sola): \n No admite redes sociales, solo páginas web", 
                                  placeholder="https://ejemplo.com/pagina", value ="https://www.elektra.mx/italika",  height=150),
-                ui.input_text_area("parser_description", "Describe qué información quieres extraer:", 
+                ui.input_text_area("parser_description", "Describe qué información quieres extraer: (Solo tablas de sitios web)", 
                                  placeholder="Ej: 'Tabla de precios de productos'", height=100, value = 'Genera una tabla con los precios de las motos de mayor a menor precio'),
                 ui.input_action_button("execute_scraper_parser", "Scrapear y Parsear", 
                                        icon=ui.tags.i(class_="fas fa-play"), class_="btn-primary"),
                 ui.hr(),
                 ui.input_action_button("boton_logout", "Cerrar Sesión", class_="btn-danger btn-sm btn-block")
+            )
+        elif pestana_actual == "Módulo de Comparación misma red":
+            return ui.div(
+                    ui.markdown("### Comparación de Datos por Sesión"),
+                    ui.output_text("active_session_id_for_comparison_display"),
+                    ui.input_select("comparison_platform_selector", "Seleccionar Plataforma:",
+                        {"twitter": "Twitter (X)", "youtube": "YouTube", "maps": "Google Maps", "reddit": "Reddit",
+                        "facebook": "Facebook (Próximamente)", "tiktok": "TikTok (Próximamente)"}),
+                    ui.input_text("comparison_query_1", "Marca/Tópico 1:", placeholder="Ej: 'iPhone 15' o '#ElonMusk'"),
+                    ui.input_text("comparison_query_2", "Marca/Tópico 2:", placeholder="Ej: 'Samsung S24' o '#Tesla'"),
+                    ui.input_text("comparison_query_3", "Marca/Tópico 3 (Opcional):", placeholder="Ej: 'Google Pixel'"),
+                    #ui.input_text("comparison_query_4", "Marca/Tópico 4 (Opcional):", placeholder="Ej: 'OnePlus'"),
+                    #ui.input_text("comparison_query_5", "Marca/Tópico 5 (Opcional):", placeholder="Ej: 'Xiaomi'"),
+                    ui.hr()
             )
         else: # Para "Base de Datos y Chatbot" y "Análisis y Visualizaciones"
             return ui.div(
@@ -542,8 +768,15 @@ def server(input, output, session):
                 ui.markdown("**Social Media Downloader** - Extrae y analiza datos de diferentes plataformas."),
                 ui.hr(),
                 ui.input_select("platform_selector", "Seleccionar Plataforma:",
-                    {"wikipedia": "Wikipedia", "playstore": "Google Play Store", "youtube": "YouTube", "maps": "Google Maps", "reddit": "Reddit", "twitter": "Twitter (X)", "generic_webpage": "Página web Genérica", "facebook": "Facebook (Próximamente)", "instagram": "Instagram (Próximamente)", "amazon_reviews": "Amazon Reviews (Próximamente)"}),
+                    ##{"wikipedia": "Wikipedia", "playstore": "Google Play Store", "youtube": "YouTube", "maps": "Google Maps", "reddit": "Reddit", "twitter": "Twitter (X)", "generic_webpage": "Página web Genérica", "facebook": "Facebook (Próximamente)", "instagram": "Instagram (Próximamente)", "amazon_reviews": "Amazon Reviews (Próximamente)"}),
+                    {"playstore": "Google Play Store", "youtube": "YouTube", "maps": "Google Maps", "reddit": "Reddit", "twitter": "Twitter (X)", "generic_webpage": "Página web Genérica", "wikipedia": "Wikipedia", "facebook": "Facebook (Próximamente)", "instagram": "Instagram (Próximamente)", "amazon_reviews": "Amazon Reviews (Próximamente)"}),
+
                 ui.output_ui("platform_inputs"),
+                ui.hr(),
+                ui.input_checkbox('use_comparison_session', 'Iniciar/Continuar sesión de comparación', False ),
+                ui.output_text("current_session_id_display"), # Para mostrar el ID actual
+                ui.input_action_button("clear_comparison_session", "Limpiar Sesión de Comparación Actual", class_="btn-warning btn-sm mt-1"),
+                ui.hr(),
                 ui.input_action_button("execute", " Scrapear!!", icon=ui.tags.i(class_="fas fa-play"), class_="btn-primary"),
                 ui.hr(),
                 ui.input_action_button("boton_logout", "Cerrar Sesión", class_="btn-danger btn-sm btn-block")
@@ -557,10 +790,12 @@ def server(input, output, session):
                 ui.nav_panel("Base de Datos", 
                              ui.output_data_frame('df_data'),
                              ui.download_button("download_data", "Descargar CSV", icon=ui.tags.i(class_="fas fa-download"), class_="btn-info btn-sm mb-2 mt-2"),
+                             ui.download_button("download_data_excel", "Descargar Excel", icon=ui.tags.i(class_="fas fa-file-excel"), class_="btn-success btn-sm mb-2 mt-2 ms-2"), # Botón Excel
                              icon=ui.tags.i(class_="fas fa-table-list")),
                 ui.nav_panel("Resumen General", 
                              ui.output_ui('styled_summary_output'), 
-                             icon=ui.tags.i(class_="fas fa-file-lines")),
+                             #icon=ui.tags.i(class_="fas fa-file-lines")),
+                             icon = ui.tags.i(class_ ="fa-solid fa-newspaper")),
                 ui.nav_panel("Chat con Gemini", 
                              # icon=ui.tags.i(class_="fa-solid fa-robot"), # Movido después del layout
                              ui.layout_sidebar(
@@ -577,7 +812,7 @@ def server(input, output, session):
                              ), 
                              icon=ui.tags.i(class_="fa-solid fa-robot") # Icono al final
                 ),
-                ui.nav_panel("Mapa Geográfico (Solo al seleccionar Google Maps)", 
+                ui.nav_panel("Mapa (Solo al seleccionar Google Maps)", 
                              ui.output_ui("google_map_embed"), 
                              icon=ui.tags.i(class_="fas fa-map-marked-alt"))
             ),
@@ -606,6 +841,117 @@ def server(input, output, session):
             ),
             icon=ui.tags.i(class_="fas fa-chart-pie")
         )
+    
+    def nav_panel_comparison_module():
+        return ui.nav_panel(
+            "Módulo de Comparación",
+            ui.markdown("### Comparación de Datos por Sesión"),
+            ui.output_text("active_session_id_for_comparison_display"),
+            ui.input_action_button("execute_comparison", "Generar Comparación de la Sesión Actual", class_="btn-info mt-2 mb-3"),
+            ui.hr(),
+            #ui.output_ui("comparison_summary_output"),
+            #ui.hr(),
+            output_widget("comparison_sentiment_plot"),
+            ui.hr(),
+            output_widget("comparison_emotion_plot"),
+            #ui.hr(),
+            #output_widget("comparison_topics_plot"),
+            icon=ui.tags.i(class_="fas fa-balance-scale")
+        )
+    
+    #def nav_panel_modulo_comparacion():
+    def nav_panel_cross_source_comparison():
+        return ui.nav_panel(
+            "Módulo de Comparación entre redes sociales",
+            ui.navset_card_pill(
+                ui.nav_panel("Análisis General Comparativo",
+                   # ui.markdown("### Comparación de Datos por Sesión"),
+                   # ui.output_text("active_session_id_for_comparison_display"),
+                    ui.markdown("### Comparación de Datos en la Misma Red"),
+                    ui.output_text("same_network_active_session_id_display"),
+                    ui.input_action_button("execute_cross_source_comparison", "Generar/Actualizar Comparación de la Sesión Actual", class_="btn-info mt-2 mb-3"),
+                    ui.hr(),
+                    ui.output_ui("comparison_summary_output"),
+                    ui.hr(),
+                    output_widget("comparison_sentiment_plot"),
+                    ui.hr(),
+                    output_widget("comparison_emotion_plot"),
+                    ui.hr(),
+                    output_widget("comparison_topics_plot"),
+                    icon=ui.tags.i(class_="fas fa-chart-bar")
+                ),
+                ui.nav_panel("Chatbot Comparativo entre fuentes",
+                    ui.markdown("### Chatea con los Datos de la Sesión de Comparación"),
+                    #ui.output_text("active_session_id_for_comparison_chat_display"),
+                    ui.output_text("active_session_id_for_cross_source_comparison_chat_display"), # NEW: Separate chat display for cross-source
+                    ui.hr(),
+                    ui.input_text_area("comparison_chat_prompt", "Tu pregunta sobre los datos comparados:", rows=3, placeholder="Ej: ¿Cuáles son las principales diferencias entre las fuentes?"),
+                    ui.input_action_button("ask_comparison_chat", "Preguntar al Chatbot Comparativo", class_="btn-primary mt-2"),
+                    ui.hr(),
+                    ui.card(
+                        ui.card_header("Respuesta del Chatbot Comparativo"),
+                        ui.output_ui("comparison_chat_response_output"), # Usamos output_ui para renderizar Markdown
+                        style="min-height: 300px; overflow-y: auto;"
+                    ),
+                    icon=ui.tags.i(class_="fas fa-comments")
+                ),
+                ui.nav_panel("Generador de Infografía (Beta)",
+                    ui.markdown("### Generar Infografía de la Comparación"),
+                    ui.input_text("infographic_title", "Título para la Infografía:", placeholder="Ej: Comparativa de Opiniones sobre Producto X"),
+                    #ui.input_action_button("generate_infographic_pdf", "Generar y Descargar Infografía (PDF)", class_="btn-success mt-2 mb-3"),
+                    #ui.download_button("generate_infographic_pdf_handler", "Generar y Descargar Infografía (PDF)", class_="btn-success mt-2 mb-3"),                    
+                    ui.download_button("generate_cross_source_infographic_pdf_handler", "Generar y Descargar Infografía (PDF)", class_="btn-success mt-2 mb-3"), # NEW: Separate infographic handler for cross-source
+                    ui.output_ui("infographic_generation_status"), # Para mostrar mensajes de estado
+                    icon=ui.tags.i(class_="fas fa-file-pdf")
+                )
+            ),
+            icon=ui.tags.i(class_="fas fa-balance-scale")
+        )
+
+    def nav_panel_comparacion_misma_red():
+        return ui.nav_panel(
+            "Módulo de Comparación misma red",
+            ui.navset_card_pill(
+                ui.nav_panel("Análisis General Comparativo",
+                   
+                    #ui.markdown("### Comparación de Datos por Sesión"),
+                    #ui.output_text("active_session_id_for_comparison_display"),
+                    #ui.input_select("comparison_platform_selector", "Seleccionar Plataforma:",
+                    #    {"twitter": "Twitter (X)", "youtube": "YouTube", "maps": "Google Maps", "reddit": "Reddit",
+                    #    "facebook": "Facebook (Próximamente)", "tiktok": "TikTok (Próximamente)"}),
+                    #ui.input_text("comparison_query_1", "Marca/Tópico 1:", placeholder="Ej: 'iPhone 15' o '#ElonMusk'"),
+                    #ui.input_text("comparison_query_2", "Marca/Tópico 2:", placeholder="Ej: 'Samsung S24' o '#Tesla'"),
+                    #ui.input_text("comparison_query_3", "Marca/Tópico 3 (Opcional):", placeholder="Ej: 'Google Pixel'"),
+                    #ui.input_text("comparison_query_4", "Marca/Tópico 4 (Opcional):", placeholder="Ej: 'OnePlus'"),
+                    #ui.input_text("comparison_query_5", "Marca/Tópico 5 (Opcional):", placeholder="Ej: 'Xiaomi'"),
+                    #ui.hr(),
+                
+                    ui.output_ui("same_network_comparison_summary_output"), # NEW: Output for same-network summary
+                    ui.input_action_button("execute_same_network_comparison", "Generar Comparación", class_="btn-info mt-2 mb-3"),
+                    ui.hr(),
+                    output_widget("same_network_sentiment_plot"),
+                    ui.hr(),
+                    output_widget("same_network_emotion_plot"),
+                    icon=ui.tags.i(class_="fas fa-chart-bar")
+                ),
+                ui.nav_panel("Chatbot Comparativo Misma Red",
+                    ui.markdown("### Chatea con los Datos de la Sesión de Comparación"),
+                    ui.output_text("active_session_id_for_same_network_comparison_chat_display"),
+                    ui.hr(),
+                    ui.input_text_area("same_network_comparison_chat_prompt", "Tu pregunta sobre los datos comparados:", rows=3, placeholder="Ej: ¿Cuáles son las principales diferencias entre las fuentes?"),
+                    ui.input_action_button("ask_same_network_comparison_chat", "Preguntar al Chatbot Comparativo", class_="btn-primary mt-2"),
+                    ui.hr(),
+                    ui.card(
+                        ui.card_header("Respuesta del Chatbot Comparativo"),
+                        ui.output_ui("same_network_comparison_chat_response_output"),
+                        style="min-height: 300px; overflow-y: auto;"
+                    ),
+                    icon=ui.tags.i(class_="fas fa-comments")
+                )
+            ),
+            icon=ui.tags.i(class_="fa-solid fa-scale-unbalanced-flip")
+        )
+
 
     def nav_panel_scraper_tablas_chatbot():
         return ui.nav_panel(
@@ -613,11 +959,43 @@ def server(input, output, session):
             # El contenido principal es posicional
             ui.card(
                 ui.card_header("Resultados del Scraper y Parser"),
+                ui.download_button("download_scraper_parser_table", "Descargar Tabla CSV", icon=ui.tags.i(class_="fas fa-download"), class_="btn-success btn-sm mb-2 mt-2"),
+                ui.download_button("download_scraper_parser_table_excel", "Descargar Tabla Excel", icon=ui.tags.i(class_="fas fa-file-excel"), class_="btn-success btn-sm mb-2 mt-2 ms-2"), # Botón Excel
                 ui.output_ui("scraper_parser_output"),
                 style="overflow-y: auto;"
             ),
             icon=ui.tags.i(class_="fa-solid fa-wand-magic-sparkles") # El argumento de palabra clave 'icon' va al final
         )
+
+    def fetch_comparison_data(session_id):
+        if not _ensure_psycopg2_connection() or not session_id:
+            return None # O un diccionario de DataFrames vacíos
+
+        conn = psycopg2_conn_instance.get()
+        all_data = {}
+        table_names = [ # Lista de tus tablas que pueden tener session_id
+            "wikipedia_data", "youtube_comments_data", "maps_reviews_data", 
+            "twitter_posts_data", "generic_webpage_data", "reddit_comments_data",
+            "playstore_reviews_data" # , "llm_web_parser_data"
+        ]
+
+        try:
+            with conn.cursor() as cursor:
+                for table in table_names:
+                    query = f"SELECT * FROM iris_scraper.{table} WHERE session_id = %s"
+                    cursor.execute(query, (session_id,))
+                    results = cursor.fetchall()
+                    if results:
+                        colnames = [desc[0] for desc in cursor.description]
+                        all_data[table] = pd.DataFrame(results, columns=colnames)
+                    else:
+                        all_data[table] = pd.DataFrame() # DataFrame vacío si no hay datos
+            return all_data
+        except Exception as e:
+            print(f"Error fetching comparison data for session {session_id}: {e}")
+            return None
+
+
 
     # --- Resto de tu lógica de servidor ---
 
@@ -738,6 +1116,51 @@ def server(input, output, session):
                 return False
         return True 
     
+    # ---- Supabase ensure
+    #def _ensure_supabase_client():
+    #    if supabase_client_instance.get() is None:
+    #        if not SUPABASE_URL or not SUPABASE_KEY:
+    #            print("Error: Supabase URL o Key no configuradas.")
+    #            ui.notification_show("Supabase no configurado. No se guardarán los datos.", type="error", duration=7)
+    #            return False
+    #        try:
+    #            print("Iniciando cliente de Supabase...")
+    #            client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    #            supabase_client_instance.set(client)
+    #            print("Cliente de Supabase inicializado.")
+    #            return True
+    #        except Exception as e:
+    #            print(f"Error al inicializar el cliente de Supabase: {e}")
+    #            ui.notification_show(f"Error al conectar con Supabase: {e}", type="error", duration=7)
+    #            return False
+    #    return True
+    
+    # ----- Supabase ensure psql
+    def _ensure_psycopg2_connection():
+        if psycopg2_conn_instance.get() is None:
+            if not all([PG_HOST, PG_PORT, PG_DBNAME, PG_USER, PG_PASSWORD]):
+                print("Error: PostgreSQL connection details not fully configured.")
+                ui.notification_show("PostgreSQL no configurado. No se guardarán los datos.", type="error", duration=7)
+                return False
+            try:
+                print("Attempting to connect to PostgreSQL...")
+                conn = psycopg2.connect(
+                    host=PG_HOST,
+                    port=PG_PORT,
+                    dbname=PG_DBNAME,
+                    user=PG_USER,
+                    password=PG_PASSWORD
+                )
+                psycopg2_conn_instance.set(conn)
+                print("Successfully connected to PostgreSQL.")
+                return True
+            except Exception as e:
+                print(f"Error connecting to PostgreSQL: {e}")
+                ui.notification_show(f"Error al conectar con PostgreSQL: {e}", type="error", duration=7)
+                return False
+        return True    
+        
+    ### 
     def embed_texts_gemini(texts: TypingList[str],  task_type="RETRIEVAL_DOCUMENT") -> TypingList[TypingList[float]]:
         if not _ensure_gemini_embeddings_model():
             raise Exception('Los embeddings de Gemini no están disponibles')
@@ -822,7 +1245,7 @@ def server(input, output, session):
             else:
                 # Si Spacy es neutral, usa otro método
                 sentiment_spacy_neutral = 'Neutral'
-                print(f"SpacyTextBlob polarity ({polarity_spacy:.3f}) is neutral/weak. Consulting Pysentimiento for: '{text[:60]}...'")
+                #print(f"SpacyTextBlob polarity ({polarity_spacy:.3f}) is neutral/weak. Consulting Pysentimiento for: '{text[:60]}...'")
 
                 use_pysentimiento = _ensure_pysentimiento_analyzer()
                 analyzer_pysent = pysentimiento_analyzer_instance.get() if use_pysentimiento else None
@@ -834,10 +1257,10 @@ def server(input, output, session):
                         sentiment_pysent = pysent_sentiment_map.get(result_pysentimiento.output, "Neutral")
 
                         if sentiment_pysent != "Neutral":
-                            print(f"Pysentimiento valores: {sentiment_pysent} (Probas: {result_pysentimiento.probas})")
+                            #print(f"Pysentimiento valores: {sentiment_pysent} (Probas: {result_pysentimiento.probas})")
                             return sentiment_pysent
                         else:
-                            print(f"Pysentimiento también dice que es neutral: {result_pysentimiento.probas}")
+                            #print(f"Pysentimiento también dice que es neutral: {result_pysentimiento.probas}")
                             return sentiment_spacy_neutral
                     except Exception as e:
                         print(f"Error en pysentimiento: {e}. Tomando el valor de Spacy ({sentiment_spacy_neutral}).")
@@ -889,37 +1312,6 @@ def server(input, output, session):
             print(f"Error en el análisis de emociones {e}")
             return "Error: Análisis de emociones fallido"
 
-    #@reactive.calc
-    #def detectEmotion(text):
-    #    ### Obtiene el modelo preentrenado
-    #    #model_path = "daveni/twitter-xlm-roberta-emotion-es"
-    #    #tokenizer = AutoTokenizer.from_pretrained(model_path )
-    #    #config = AutoConfig.from_pretrained(model_path )
-    #    #emotions_model = AutoModelForSequenceClassification.from_pretrained(model_path)
-    #    model = emotion_model.get()
-    #    tokenizer = emotion_tokenizer.get()
-    #    config = emotion_config.get()
-    #    if model is None or tokenizer is None or config is None:
-    #        return "Modelo no cargado", None
-    #    ### Starting the encoding
-    #    text = str(text)
-    #    encoded_input = tokenizer(text, return_tensors='pt')
-    #    try:
-    #        #output = emotions_model(**encoded_input)
-    #        output = model(**encoded_input)
-    #        scores = output[0][0].detach().numpy()
-    #        scores = softmax(scores)
-    #        ranking = np.argsort(scores)
-    #        ranking = ranking[::-1]
-    #        emotions_score = np.sort(range(scores.shape[0]))
-    #        emotions_score= emotions_score[0]
-    #        l = config.id2label[ranking[emotions_score]]
-    #        s = scores[ranking[emotions_score]]
-    #        if l=='others':
-    #            l='neutral'
-    #        return l, np.round(float(s), 4)
-    #    except:
-    #        return None, None
 
 
     def collapse_text(df):
@@ -945,13 +1337,12 @@ def server(input, output, session):
             return f"Error al intentar unir el texto: {e}"          
 
 
-    def scrape_website(website_url):
+    def scrape_website(website_url, proxy=None):
         print(f"Attempting to scrape: {website_url}")
         
-        unique_user_data_dir = None  # Initialize
-        driver = None               # Initialize
+        unique_user_data_dir = None  
+        driver = None               
 
-        # Select a random User-Agent for this attempt
         selected_user_agent = random.choice(user_agents)        
         try:
             options = webdriver.ChromeOptions()
@@ -963,7 +1354,9 @@ def server(input, output, session):
             options.add_argument("--ignore-certificate-errors")
             options.add_argument("--disable-extensions")
             options.add_argument("--disable-infobars")
-            options.add_argument(f"user-agent={selected_user_agent}") # Set the random User-Agent
+            options.add_argument(f"user-agent={selected_user_agent}") 
+            if proxy:
+                options.add_argument(f'--proxy-server={proxy}') # Add proxy argument
             unique_user_data_dir = tempfile.mkdtemp() # Create dir
             options.add_argument(f"--user-data-dir={unique_user_data_dir}")
 
@@ -1044,6 +1437,22 @@ def server(input, output, session):
                     
                     print(f"Navigating to {website_url} with Selenium...")
                     driver.get(website_url) # This can timeout
+                    # Apply stealth settings
+                    try:
+                        stealth(driver,
+                                languages=["en-US", "en"],
+                                vendor="Google Inc.",
+                                platform="Win32",
+                                webgl_vendor="Intel Inc.",
+                                renderer="Intel Iris OpenGL Engine",
+                                fix_hairline=True,
+                                )
+                        print("Selenium stealth applied.")
+                    except Exception as stealth_e:
+                        print(f"Error applying selenium-stealth: {stealth_e}")
+                        # Continue without stealth if it fails
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);") # Scroll to bottom
+                    time.sleep(random.uniform(1, 3))
                     print("Page loaded with Selenium.")
                     selenium_content = driver.page_source
                 except TimeoutException as e_timeout:
@@ -1073,6 +1482,9 @@ def server(input, output, session):
             print(f"Attempting fallback with requests for {website_url} (Reason: {selenium_attempt_error or 'Selenium did not yield usable content'})...")
             try:
                 agent = {'User-Agent': selected_user_agent}
+                if proxy:
+                    proxies = {'http': proxy, 'https': proxy}
+                    page = requests.get(website_url, headers=agent, timeout=15, proxies=proxies)
                 page = requests.get(website_url, headers=agent, timeout=15)
                 page.raise_for_status()
                 print("Requests fallback successful.")
@@ -1241,6 +1653,7 @@ def server(input, output, session):
         else:
             #return "No hay texto para resumir."
             if not _ensure_gemini_model():
+            #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
                 return "Error: Modelo de Gemini no disponible"
             gemini_model = gemini_model_instance.get()
             max_gemini_input_len = 1000
@@ -1262,11 +1675,12 @@ def server(input, output, session):
                 return f"Error al resumir con Gemini: {e}"
 
     #### Añadido el 26 de Abril 2025
-    def topics_generator(text):
+    def topics_generator_(text):
         if not text:
             return "No hay texto para resumir"
         text = str(text)
         if not _ensure_gemini_model():
+        #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
             return "Error: Modelo de Gemini no disponible"
         gemini_model = gemini_model_instance.get()
         max_gemini_input_len = 7000
@@ -1325,6 +1739,180 @@ def server(input, output, session):
         translatedText = GoogleTranslator(source = source, target = target).translate(text)
         return translatedText    
     
+    """
+    def save_df_to_supabase(df: pd.DataFrame, platform_name: str, requested_by: str):
+        if not _ensure_supabase_client():
+            # La notificación ya se muestra en _ensure_supabase_client si falla
+            return
+
+        sb_client = supabase_client_instance.get()
+        
+        table_name_map = {
+            "wikipedia": "wikipedia_data",
+            "youtube": "youtube_comments_data",
+            "maps": "maps_reviews_data",
+            "twitter": "twitter_posts_data",
+            "generic_webpage": "generic_webpage_data",
+            "reddit": "reddit_comments_data",
+            "playstore": "playstore_reviews_data",
+            "llm_web_parser": "llm_web_parser_data" # Añadido para el parser LLM
+        }
+        table_name = table_name_map.get(platform_name)
+
+        if not table_name:
+            ui.notification_show(f"Error: No hay tabla de Supabase definida para la plataforma '{platform_name}'. Los datos no se guardaron.", type="error", duration=7)
+            print(f"Error: No Supabase table defined for platform '{platform_name}'.")
+            return
+
+        if df.empty or ('Error' in df.columns and len(df) == 1) or ('Mensaje' in df.columns and len(df) == 1):
+            print(f"DataFrame para {platform_name} está vacío o es un error/mensaje. No se guarda en Supabase.")
+            return
+
+        df_copy = df.copy()
+        df_copy["request_timestamp"] = datetime.now(timezone.utc).isoformat()
+        df_copy["requested_by_user"] = requested_by
+
+        # Convertir tipos de datos problemáticos para JSON/Supabase
+        for col in df_copy.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]']).columns:
+            df_copy[col] = df_copy[col].apply(lambda x: x.isoformat() if pd.notnull(x) else None)
+        df_copy = df_copy.replace({pd.NaT: None, np.nan: None}) # Convertir NaT y NaN a None
+
+        records_to_insert = df_copy.to_dict(orient='records')
+
+        try:
+            #response = sb_client.table(table_name).schema("iris_scraper").insert(records_to_insert).execute()
+            response = sb_client.table(table_name).insert(records_to_insert).select("*").execute()
+
+            # La respuesta de insert de Supabase-py V2 es APIResponse, accedemos a .data
+            if response.data: # Si hay datos, la inserción fue (probablemente) exitosa
+                ui.notification_show(f"{len(response.data)} registros guardados en Supabase (tabla: '{table_name}', esquema: 'iris_scraper').", type="message", duration=5)
+                print(f"Se guardaron exitosamente {len(response.data)} registros en la tabla '{table_name}' de Supabase.")
+            # Considerar cómo Supabase-py v2 maneja errores que no son excepciones
+            # Por ejemplo, si response.error existe.
+            elif hasattr(response, 'error') and response.error:
+                 ui.notification_show(f"Error al guardar en Supabase tabla '{table_name}': {response.error.message}", type="error", duration=7)
+                 print(f"Error al guardar en Supabase tabla '{table_name}': {response.error}")
+        except Exception as e:
+            ui.notification_show(f"Error al guardar en Supabase tabla '{table_name}': {str(e)}", type="error", duration=7)
+            print(f"Error al guardar en Supabase tabla '{table_name}': {e}")
+            import traceback
+            traceback.print_exc()    
+    """
+    def save_df_to_postgres_with_psycopg2(df: pd.DataFrame, platform_name: str, requested_by: str, input_reference_value: str = None, session_id_value: str = None):
+        if not _ensure_psycopg2_connection():
+            return
+
+        conn = psycopg2_conn_instance.get()
+        
+        table_name_map = {
+            "wikipedia": "wikipedia_data",
+            "youtube": "youtube_comments_data",
+            "maps": "maps_reviews_data",
+            "twitter": "twitter_posts_data",
+            "generic_webpage": "generic_webpage_data",
+            "reddit": "reddit_comments_data",
+            "playstore": "playstore_reviews_data"
+        }
+        table_name = table_name_map.get(platform_name)
+
+        if not table_name:
+            ui.notification_show(f"Error: No hay tabla de PostgreSQL definida para la plataforma '{platform_name}'. Los datos no se guardaron.", type="error", duration=7)
+            print(f"Error: No PostgreSQL table defined for platform '{platform_name}'.")
+            return
+
+        if df.empty or ('Error' in df.columns and len(df) == 1) or ('Mensaje' in df.columns and len(df) == 1):
+            print(f"DataFrame para {platform_name} está vacío o es un error/mensaje. No se guarda en Supabase.")
+            return
+
+        # 1. Preparar df_insert para la INSERCIÓN de datos
+        df_insert = df.copy()
+
+        # Eliminar 'id' de df_insert si existe, ya que la BD lo generará.
+        if "id" in df_insert.columns:
+            df_insert = df_insert.drop(columns=["id"])
+            print("Se eliminó la columna 'id' existente del DataFrame antes de la inserción.")
+
+        # Añadir columnas de metadatos estándar
+        df_insert["request_timestamp"] = datetime.now(timezone.utc) # Almacenar como datetime
+        if input_reference_value is not None:
+            df_insert["input_reference"] = input_reference_value
+        if session_id_value is not None:
+            df_insert["session_id"] = session_id_value
+        df_insert["requested_by_user"] = requested_by
+
+        # Replace NaT/NaN in the DataFrame that will be inserted
+        df_insert = df_insert.replace({pd.NaT: None, np.nan: None})
+
+        # Columnas para la sentencia INSERT
+        quoted_insert_columns = [f'"{col_name}"' for col_name in df_insert.columns]
+        cols_sql = ", ".join(quoted_insert_columns)
+        
+        qualified_table_name = f"iris_scraper.{table_name}"
+        sql = f"INSERT INTO {qualified_table_name} ({cols_sql}) VALUES %s"
+    
+        data_tuples = [tuple(x) for x in df_insert.to_numpy()]
+
+        # 2. Preparar df_for_schema_definition para la sentencia CREATE TABLE
+        df_schema_base = df.copy()
+        
+        # Columnas que get_create_table_sql maneja explícitamente o que no son parte del esquema de datos
+        cols_to_drop_for_schema = ["id"] # 'id' siempre es manejada por get_create_table_sql
+        if input_reference_value is not None:
+            # Si se provee input_reference_value, get_create_table_sql añadirá 'input_reference'.
+            # Por lo tanto, si 'input_reference' existe en el df original, debe eliminarse de df_schema_base
+            # para evitar definirla dos veces. Si no existe, eliminarla no causa daño.
+            cols_to_drop_for_schema.append("input_reference")
+        if session_id_value is not None: # Similarmente para session_id
+            cols_to_drop_for_schema.append("session_id")
+
+        df_schema_base = df_schema_base.drop(columns=cols_to_drop_for_schema, errors='ignore')
+        # print(f"Columnas en df_schema_base después de eliminar id/input_reference: {df_schema_base.columns.tolist()}")
+
+        # Añadir columnas de metadatos para la inferencia del esquema (sus tipos serán inferidos)
+        df_for_schema_definition = df_schema_base.copy() # Empezar con la base limpia
+        df_for_schema_definition["request_timestamp"] = pd.NaT # Para inferencia de dtype
+        df_for_schema_definition["requested_by_user"] = ""   # Para inferencia de dtype
+        # print(f"Columnas en df_for_schema_definition para get_create_table_sql: {df_for_schema_definition.columns.tolist()}")
+
+        cursor = None
+        try:
+            cursor = conn.cursor()
+
+            # Generate and execute CREATE TABLE IF NOT EXISTS
+            #create_table_sql_stmt = get_create_table_sql(df_copy, qualified_table_name)
+            #create_table_sql_stmt = get_create_table_sql(df_copy.drop(columns=["input_reference_internal_use"], errors='ignore'), qualified_table_name, has_input_reference_col=(input_reference_value is not None))
+            # df_for_schema_definition does not contain 'input_reference' at this point.
+            # get_create_table_sql will add 'input_reference TEXT' if (input_reference_value is not None) is True.
+            create_table_sql_stmt = get_create_table_sql(
+                df_for_schema_definition,
+                qualified_table_name,
+                has_input_reference_col=(input_reference_value is not None), 
+                has_session_id_col=(session_id_value is not None)
+
+            )            
+            print(f"Ensuring table {qualified_table_name} exists...")
+            # print(f"Schema SQL: {create_table_sql_stmt}") # For debugging the generated SQL
+            cursor.execute(create_table_sql_stmt)
+            # conn.commit() # DDL like CREATE TABLE IF NOT EXISTS is often auto-committed or can be committed here.
+            execute_values(cursor, sql, data_tuples)
+            conn.commit()
+            ui.notification_show(f"{len(data_tuples)} registros guardados en PostgreSQL (tabla: '{qualified_table_name}').", type="message", duration=5)
+            print(f"Se guardaron exitosamente {len(data_tuples)} registros en la tabla '{qualified_table_name}' de PostgreSQL.")
+        except psycopg2.Error as e:
+            if conn: 
+                conn.rollback()
+            ui.notification_show(f"Error de Psycopg2 al guardar en '{qualified_table_name}': {str(e)}", type="error", duration=7)
+            print(f"Error de Psycopg2 al guardar en '{qualified_table_name}': {e}")           
+            import traceback
+            traceback.print_exc()
+        except Exception as e: 
+            if conn: 
+                conn.rollback()
+            ui.notification_show(f"Error general al guardar en '{qualified_table_name}': {str(e)}", type="error", duration=7)
+            print(f"Error general al guardar en '{qualified_table_name}': {e}")        
+        finally:
+            if cursor:
+                cursor.close()
 
     @reactive.Effect
     @reactive.event(input.execute)
@@ -1332,6 +1920,23 @@ def server(input, output, session):
         platform = input.platform_selector()
         df = pd.DataFrame()
         map_coordinates.set(None)
+        current_input_reference = None
+        
+        session_id_to_use = None # Default to no session ID
+        if input.use_comparison_session(): # Check the state of the checkbox
+            # Checkbox is ticked, so we want to use/create a session ID
+            current_active_session = active_comparison_session_id.get()
+            if current_active_session is None:
+                # No active session ID yet, create a new one
+                new_sid = str(uuid.uuid4())
+                active_comparison_session_id.set(new_sid)
+                session_id_to_use = new_sid
+                ui.notification_show(f"Nueva sesión de comparación iniciada: {new_sid[:8]}...", type="info", duration=5)
+            else:
+                # An active session ID already exists, use it
+                session_id_to_use = current_active_session
+                ui.notification_show(f"Continuando sesión de comparación: {session_id_to_use[:8]}...", type="info", duration=3)
+        # If input.use_comparison_session() is False, session_id_to_use remains None, and no session-related notification is shown here.
         with ui.Progress(min=1, max=10) as p:
             p.set(message="Procesando...", detail=f"Extrayendo datos de {platform}")
             if platform == "wikipedia":
@@ -1348,13 +1953,40 @@ def server(input, output, session):
                 df = get_reddit_comments()
             elif platform=="playstore":
                 df = get_playstore_comments()
+            
+            if platform == "wikipedia": current_input_reference = input.wikipedia_url()
+            elif platform == "youtube": current_input_reference = input.youtube_url()
+            elif platform == "maps": current_input_reference = input.maps_query() # Corrected
+            elif platform == "twitter": current_input_reference = input.twitter_query() # Corrected
+            elif platform == "generic_webpage": current_input_reference = input.generic_webpage_url()
+            elif platform == "reddit": current_input_reference = input.reddit_url()
+            elif platform == "playstore": current_input_reference = input.playstore_url()
+            
         processed_dataframe.set(df)
+       # Guardar en Supabase si el df es válido y el usuario está logueado
+        if isinstance(df, pd.DataFrame) and not df.empty and \
+           not (('Error' in df.columns and len(df) == 1) or \
+                ('Mensaje' in df.columns and len(df) == 1)):
+            if usuario_autenticado.get(): # Solo guardar si el usuario está autenticado
+                #save_df_to_supabase(df, platform, usuario_autenticado.get())
+                save_df_to_postgres_with_psycopg2(df, platform, usuario_autenticado.get(), current_input_reference, session_id_value = session_id_to_use)
+            else:
+                # Esto solo se mostraría si se permite el scraping sin login
+                #ui.notification_show("Usuario no autenticado. Datos extraídos pero no guardados en Supabase.", type="warning", duration=7)
+                #print("Usuario no autenticado. Datos extraídos pero no guardados en Supabase.")
+                ui.notification_show("Usuario no autenticado. Datos extraídos pero no guardados en PostgreSQL.", type="warning", duration=7)        
+                print("Usuario no autenticado. Datos extraídos pero no guardados en PostgreSQL.")
+        elif isinstance(df, pd.DataFrame) and df.empty:
+            print(f"No se extrajeron datos para {platform}. Nada que guardar en Supabase.")
+        else: # df contiene un error o mensaje
+            print(f"La extracción para {platform} resultó en un error/mensaje. No se guarda en Supabase.")
 
     @reactive.Effect
     @reactive.event(input.execute_scraper_parser)
     def handle_scraper_parser_execute():
         urls_input = input.scraper_urls()
         parse_description = input.parser_description()
+        current_user = usuario_autenticado.get()
 
         if not urls_input:
             scraper_parser_results.set({"error": "Por favor, ingresa al menos una URL."})
@@ -1366,7 +1998,11 @@ def server(input, output, session):
         if not parse_description:
             scraper_parser_results.set({"error": "Por favor, ingresa una descripción para el parseo."})
             return
-
+        if not current_user:
+            ui.notification_show("Usuario no autenticado. No se pueden guardar los datos parseados.", type="error", duration=5)
+            scraper_parser_results.set({"error": "Usuario no autenticado. Los resultados no se guardarán."})
+            return
+        
         with ui.Progress(min=1, max=len(urls_list) + 3) as p:
             p.set(message="Procesando Scraper/Parser...", detail="Iniciando...")
             all_cleaned_content = []
@@ -1388,7 +2024,18 @@ def server(input, output, session):
             
             scraper_parser_results.set({"raw_outputs": raw_llm_outputs, "extracted_tables": all_extracted_tables, "merged_table": merged_table_df})
             p.set(len(urls_list) + 3, detail="Completado.")
-            
+            """
+            # Guardar merged_table_df en Supabase
+            if isinstance(merged_table_df, pd.DataFrame) and not merged_table_df.empty and \
+               not (('Error' in merged_table_df.columns and len(merged_table_df) == 1) or \
+                    ('Mensaje' in merged_table_df.columns and len(merged_table_df) == 1)):
+                if current_user: # Doble chequeo, aunque ya se hizo arriba
+                    save_df_to_postgres_with_psycopg2(merged_table_df, "llm_web_parser", current_user)
+            elif isinstance(merged_table_df, pd.DataFrame) and merged_table_df.empty:
+                 print("El Parser LLM resultó en un DataFrame vacío. Nada que guardar en Supabase.")
+            else: # merged_table_df contiene un error o mensaje
+                 print("El Parser LLM resultó en un DataFrame de error/mensaje. No se guarda en Supabase.")
+            """
 
     ## Pinecone structure
     @reactive.Effect
@@ -1600,6 +2247,7 @@ def server(input, output, session):
             df['sentiment'] = df['text'].apply(generate_sentiment_analysis)
             df['emotion'] = df['text'].apply(generate_emotions_analysis)
             classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
+            df['origin'] = "wikipedia"
             df['topics'] = df['text'].apply(classify_call)
         else: 
             df['text'] = df['text'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es'))
@@ -1607,6 +2255,7 @@ def server(input, output, session):
             df['emotion'] = df['text'].apply(generate_emotions_analysis)
             classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
             df['topics'] = df['text'].apply(classify_call)
+            df['origin'] = "wikipedia"
 
         return df
 
@@ -1673,6 +2322,7 @@ def server(input, output, session):
                 df['emotion'] = df['text'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['text'].apply(classify_call)
+                df['origin'] = "generic_webpage"
 
             else: 
                 df['text'] = df['text'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es'))
@@ -1680,6 +2330,7 @@ def server(input, output, session):
                 df['emotion'] = df['text'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['text'].apply(classify_call)
+                df['origin'] = "generic_webpage"
             return df        
         except Exception as e:
             return pd.DataFrame({"Error": [f"Error al acceder a la página web: {str(e)}"]})
@@ -1707,7 +2358,7 @@ def server(input, output, session):
         tweet_fields_to_request = ['created_at', 'public_metrics', 'author_id', 'conversation_id', 'in_reply_to_user_id', 'lang']
         expansions_to_request = ['author_id', 'in_reply_to_user_id']
         user_fields_to_request = ['username', 'name', 'profile_image_url', 'verified']
-        max_results_count = 10
+        max_results_count = 100
         try: 
             if("x.com/" in twitter_query and "/status/" in twitter_query)  or \
             ("x.com/" in twitter_query and "/status/" in twitter_query):
@@ -1833,12 +2484,14 @@ def server(input, output, session):
                 df['emotion'] = df['text'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['text'].apply(classify_call)
+                df['origin'] = "twitter"
 
             else: 
                 df['text'] = df['text'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es')) 
                 df['sentiment'] = df['text'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['text'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
+                df['origin'] = "twitter"
                 df['topics'] = df['text'].apply(classify_call)
             
             return df
@@ -1930,7 +2583,7 @@ def server(input, output, session):
                 part='snippet', 
                 videoId=video_id,
                 textFormat='plainText',
-                maxResults=10
+                maxResults=100
             ).execute()
             for item in response['items']:
                 comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
@@ -1984,12 +2637,14 @@ def server(input, output, session):
                 df['emotion'] = df['comment'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['comment'].apply(classify_call)
+                df['origin'] = "youtube"
 
             else: 
                 df['comment'] = df['comment'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es')) 
                 df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['comment'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
+                df['origin'] = "youtube"
                 df['topics'] = df['comment'].apply(classify_call)
 
             #df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
@@ -2082,11 +2737,13 @@ def server(input, output, session):
                 df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['comment'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
+                df['origin'] = "maps"
                 df['topics'] = df['comment'].apply(classify_call)
             else: 
                 df['comment'] = df['comment'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es')) 
                 df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['comment'].apply(generate_emotions_analysis)
+                df['origin'] = "maps"
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['comment'].apply(classify_call)
             
@@ -2182,12 +2839,14 @@ def server(input, output, session):
                 df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['comment'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
+                df['origin'] = "reddit"
                 df['topics'] = df['comment'].apply(classify_call)
             
             else: 
                 df['comment'] = df['comment'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es')) 
                 df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['comment'].apply(generate_emotions_analysis)
+                df['origin'] = "reddit"
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['comment'].apply(classify_call)
 
@@ -2227,7 +2886,7 @@ def server(input, output, session):
                     lang='es', 
                     country='mx', 
                     sort=Sort.NEWEST, 
-                    count=30, 
+                    count=200, 
                     filter_score_with=None 
                 )
             else:            
@@ -2237,7 +2896,7 @@ def server(input, output, session):
                     lang='es', 
                     country='mx', 
                     sort=Sort.NEWEST, 
-                    count=30, 
+                    count=200, 
                     filter_score_with=None 
                 )
             df = pd.DataFrame(reviews[0])
@@ -2271,11 +2930,13 @@ def server(input, output, session):
                 df['sentiment'] = df['content'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['content'].apply(generate_emotions_analysis)
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
+                df['origin'] = "playstore"
                 df['topics'] = df['content'].apply(classify_call)
             else: 
                 df['content'] = df['content'].apply(lambda x: TranslateText(text=x, source= languageDetected, target='es')) 
                 df['sentiment'] = df['content'].apply(generate_sentiment_analysis)
                 df['emotion'] = df['content'].apply(generate_emotions_analysis)
+                df['origin'] = "playstore"
                 classify_call = partial(generate_zero_shot_classification_with_labels, candidate_labels=actual_candidate_labels)
                 df['topics'] = df['content'].apply(classify_call)
             return df     
@@ -2503,6 +3164,112 @@ def server(input, output, session):
         #return go.FigureWidget(barplot)
         return barplot    
 
+
+    def generate_seaborn_count_plot_bytes(data_dict, data_key_for_df, x_column, hue_column, title, category_orders=None, color_palette=None):
+        """
+        Genera un gráfico de conteo con Seaborn y devuelve los bytes de la imagen PNG.
+        
+        Args:
+            data_dict (dict): Diccionario que contiene DataFrames por origen.
+            data_key_for_df (str): La clave principal en data_dict para obtener el DataFrame (ej. 'youtube_df').
+                                O un DataFrame ya combinado si se prefiere.
+            x_column (str): Nombre de la columna para el eje X.
+            hue_column (str): Nombre de la columna para la segmentación por color (hue).
+            title (str): Título del gráfico.
+            category_orders (dict, optional): Diccionario para especificar el orden de las categorías.
+                                            Ej: {'sentiment': ['Positivo', 'Neutral', 'Negativo']}
+            color_palette (dict or list, optional): Paleta de colores para Seaborn.
+        """
+        
+        # 1. Preparar los datos: Combinar DataFrames de data_dict si es necesario
+        # Esta es una forma simple de combinar; ajusta según tus necesidades.
+        """
+        all_dfs = []
+        for origin, df_source in data_dict.items():
+            if isinstance(df_source, pd.DataFrame) and not df_source.empty and \
+            x_column in df_source.columns and hue_column in df_source.columns:
+                # Seleccionamos solo las columnas necesarias para el plot y añadimos 'origin'
+                # Si x_column es 'origin', entonces el hue_column es la categoría principal
+                temp_df = df_source[[x_column, hue_column]].copy()
+                # Si x_column no es 'origin', pero quieres graficar por 'origin', ajusta aquí.
+                # Para este ejemplo, asumimos que x_column podría ser 'origin' y hue_column la categoría.
+                if x_column != 'origin_column_name_in_df': # Reemplaza 'origin_column_name_in_df' si es diferente
+                    temp_df['origin_plot_col'] = origin # Añade una columna de origen si x_column no lo es
+                all_dfs.append(temp_df)
+
+        if not all_dfs:
+            print(f"Seaborn: No hay datos suficientes para graficar '{title}'.")
+            return None
+        
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        """
+        combined_df = None
+        if data_dict is None and isinstance(data_key_for_df, pd.DataFrame):
+            # Case 1: data_key_for_df is the DataFrame to plot directly
+            combined_df = data_key_for_df.copy() # Use a copy
+            if not (x_column in combined_df.columns and hue_column in combined_df.columns):
+                print(f"Seaborn: DataFrame provided to data_key_for_df is missing required columns ('{x_column}' or '{hue_column}') for '{title}'.")
+                return None
+        elif isinstance(data_dict, dict) and data_dict:
+            # Case 2: data_dict is provided, combine DFs from it
+            all_dfs_list = []
+            for origin_name, df_source_item in data_dict.items():
+                if isinstance(df_source_item, pd.DataFrame) and not df_source_item.empty and \
+                   x_column in df_source_item.columns and hue_column in df_source_item.columns:
+                    temp_df = df_source_item[[x_column, hue_column]].copy()
+                    # If x_column is not 'origin' but you intend to group by origin from the dict keys:
+                    if x_column == 'origin': # Assuming x_column is literally 'origin'
+                        temp_df[x_column] = origin_name # Ensure the origin from dict key is used if x_column is 'origin'
+                    all_dfs_list.append(temp_df)
+            
+            if not all_dfs_list:
+                print(f"Seaborn: No valid DataFrames found in data_dict to combine for '{title}'.")
+                return None
+            combined_df = pd.concat(all_dfs_list, ignore_index=True)
+        else:
+            print(f"Seaborn: Invalid arguments or no data provided for '{title}'. data_dict type: {type(data_dict)}, data_key_for_df type: {type(data_key_for_df)}")
+            return None
+
+        if combined_df is None or combined_df.empty:
+            print(f"Seaborn: No data available to plot for '{title}' after processing inputs.")
+            return None
+        
+        # Determinar el orden de las categorías para 'hue' si se proporciona
+        hue_order_list = None
+        if category_orders and hue_column in category_orders:
+            hue_order_list = category_orders[hue_column]
+
+        # Crear el gráfico
+        plt.figure(figsize=(10, 6)) # Ajusta el tamaño según necesites
+        sns.countplot(
+            data=combined_df,
+            x=x_column, # Columna para el eje X (p.ej., 'origin_plot_col' si la creaste)
+            hue=hue_column, # Columna para diferenciar por color (p.ej., 'sentiment')
+            order=category_orders.get(x_column) if category_orders else None, # Orden para las barras del eje X
+            hue_order=hue_order_list, # Orden para las categorías del hue
+            palette=color_palette
+        )
+        plt.title(title, fontsize=15)
+        plt.ylabel("Cantidad", fontsize=12)
+        plt.xlabel(x_column.replace('_plot_col','').capitalize(), fontsize=12) # Etiqueta X más limpia
+        plt.xticks(rotation=45, ha="right")
+        #plt.legend(title=hue_column.capitalize())
+        if hue_order_list or combined_df[hue_column].nunique() > 1 : # Show legend if hue is meaningful
+            plt.legend(title=hue_column.capitalize(), loc='upper right')
+        elif plt.gca().get_legend() is not None: # Remove legend if not needed (e.g. single hue category)
+             plt.gca().get_legend().remove()        
+        plt.tight_layout() # Ajusta el layout para que todo encaje bien
+
+        # Guardar en un buffer de bytes
+        img_bytes_io = io.BytesIO()
+        plt.savefig(img_bytes_io, format='png', dpi=100) # dpi controla la resolución
+        plt.close() # Importante cerrar la figura para liberar memoria
+
+        img_bytes_io.seek(0) # Rebobinar el buffer al inicio
+        return img_bytes_io.getvalue()
+
+
+
     
     #@output
     #@render.text 
@@ -2620,6 +3387,7 @@ def server(input, output, session):
             return "Texto no válido para generar el mapa mental."
 
         if not _ensure_gemini_model():
+        #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
             return "Error: Modelo de Gemini no disponible para el mapa mental."
         
         gemini_model = gemini_model_instance.get()
@@ -2867,62 +3635,59 @@ def server(input, output, session):
             return ui.markdown(f"**Error:** {results['error']}")
 
         raw_outputs = results.get("raw_outputs", [])
-        extracted_tables = results.get("extracted_tables", [])
-        merged_table = results.get("merged_table")
+        extracted_tables_list = results.get("extracted_tables", []) # Renombrado para claridad
+        merged_table_df = results.get("merged_table") # Renombrado para claridad
 
         output_elements = []
-        ### Scenario 1 
-        if merged_table is not None and not (isinstance(merged_table, pd.DataFrame) and ('Error' in merged_table.columns or 'Mensaje' in merged_table.columns)):
-            print('Escenario 1: Tabla fusionada')
-            output_elements.append(ui.tags.h5("Tabla Fusionada:", style="color: #6c757d;")) # Added some style
+        table_displayed = False
+
+        # Prioridad 1: Mostrar tabla fusionada si es válida
+        if isinstance(merged_table_df, pd.DataFrame) and not merged_table_df.empty and not ('Error' in merged_table_df.columns or 'Mensaje' in merged_table_df.columns):
+            print('Mostrando Tabla Fusionada')
+            output_elements.append(ui.tags.h5("Tabla Fusionada:", style="color: #6c757d;"))
             output_elements.append(
-                ui.HTML(merged_table.to_html(
+                ui.HTML(merged_table_df.to_html(
                     classes="table table-dark table-striped table-hover table-sm table-bordered", 
                     escape=False, border=0 # border=0 from pandas, table-bordered from Bootstrap
                 ))
             )
-
-        ### Scenario 2 
-        # Scenario 2: No valid merged table, but individual tables were extracted.
-        # This happens if merging wasn't successful or if there was only one table to begin with (no merge needed).
-        elif extracted_tables: # extracted_tables is a list of DFs from markdown_to_csv
-            output_elements.append(ui.tags.h5("Tablas Extraídas Individualmente:", style="color: #6c757d;"))
-            print('Escenario 2: Tabla extraída individualmente')
-            # If merge was attempted and resulted in a message (e.g., LLM couldn't merge), show that message.
-            if merged_table is not None and isinstance(merged_table, pd.DataFrame) and \
-               ('Error' in merged_table.columns or 'Mensaje' in merged_table.columns):
-                output_elements.append(ui.markdown(f"**Nota sobre la Fusión:** {merged_table.iloc[0].iloc[0]}"))
-
-            for i, table_df in enumerate(extracted_tables):
-                 # Ensure table_df is a DataFrame and not empty before rendering
-                if isinstance(table_df, pd.DataFrame) and not table_df.empty:
-                    output_elements.append(ui.tags.h6(f"Tabla Extraída {i+1}:", style="color: #adb5bd;"))
+            table_displayed = True
+        # Prioridad 2: Mostrar la primera tabla extraída válida si la fusionada no está disponible o no es válida
+        elif not table_displayed and extracted_tables_list:
+            first_valid_extracted_table = None
+            for i, table_df in enumerate(extracted_tables_list):
+                if isinstance(table_df, pd.DataFrame) and not table_df.empty and not ('Error' in table_df.columns or 'Mensaje' in table_df.columns):
+                    first_valid_extracted_table = table_df
+                    print(f'Mostrando Tabla Extraída Individualmente #{i+1}')
+                    output_elements.append(ui.tags.h5(f"Tabla Extraída Individualmente #{i+1}:", style="color: #6c757d;"))
                     output_elements.append(
                         ui.HTML(table_df.to_html(
                             classes="table table-dark table-striped table-hover table-sm table-bordered", 
                             escape=False, border=0
                         ))
                     )
-                 # This case should ideally not be hit if extract_tables_from_llm_outputs filters correctly
-                 # and markdown_to_csv only returns valid DFs or an empty list.
-                elif isinstance(table_df, pd.DataFrame) and ('Error' in table_df.columns or 'Mensaje' in table_df.columns):
-                    output_elements.append(ui.markdown(f"**Información Tabla {i+1}:** {table_df.iloc[0].iloc[0]}"))
-                 # else: # This case implies table_df is not a valid DataFrame to render
-                     # output_elements.append(ui.markdown(f"**Tabla {i+1}:** No se pudo mostrar (formato inesperado)."))
-        
-        # Scenario 3: No tables (neither merged nor individual) were successfully extracted.
-        # Display the raw output(s) from the LLM.
-        elif raw_outputs: # raw_outputs is a list of strings (raw responses from LLM)
-            output_elements.append(ui.tags.h5("Output del LLM (No se detectaron tablas formateadas):"))
-            print('Escenario 3: Texto solo')
+                    table_displayed = True
+                    break # Solo mostrar la primera válida
+            
+            # Si después de iterar no se mostró ninguna tabla extraída válida,
+            # y la tabla fusionada era un error/mensaje, mostrar ese mensaje.
+            if not table_displayed and isinstance(merged_table_df, pd.DataFrame) and \
+               ('Error' in merged_table_df.columns or 'Mensaje' in merged_table_df.columns):
+                output_elements.append(ui.markdown(f"**Información sobre la Fusión:** {merged_table_df.iloc[0].iloc[0]}"))
 
-            # If merge was attempted (e.g., on an empty list of tables) and resulted in a message.
-            if merged_table is not None and isinstance(merged_table, pd.DataFrame) and \
-               ('Error' in merged_table.columns or 'Mensaje' in merged_table.columns):
-                output_elements.append(ui.markdown(f"**Nota sobre la Fusión:** {merged_table.iloc[0].iloc[0]}"))
+        # Prioridad 3: Mostrar mensaje de error/info de la tabla fusionada si no se mostró ninguna tabla antes
+        elif not table_displayed and isinstance(merged_table_df, pd.DataFrame) and \
+             ('Error' in merged_table_df.columns or 'Mensaje' in merged_table_df.columns):
+            print('Mostrando Mensaje/Error de Tabla Fusionada')
+            output_elements.append(ui.markdown(f"**Información:** {merged_table_df.iloc[0].iloc[0]}"))
+            table_displayed = True # Consideramos que se mostró "algo"
+
+        # Prioridad 4: Mostrar raw_outputs si no se mostró ninguna tabla
+        if not table_displayed and raw_outputs:
+            output_elements.append(ui.tags.h5("Output del LLM (No se detectaron tablas formateadas para mostrar):", style="color: #6c757d;"))
+            print('Mostrando Raw LLM Output')
 
             # Concatenate and display all non-empty raw outputs
-            # Each item in raw_outputs corresponds to a chunk processed by the LLM
             formatted_raw_outputs = []
             for i, output_text in enumerate(raw_outputs):
                 if output_text and output_text.strip(): # Check if the string is not None and not just whitespace
@@ -2931,10 +3696,11 @@ def server(input, output, session):
             if formatted_raw_outputs:
                 output_elements.append(ui.markdown("\n\n---\n\n".join(formatted_raw_outputs)))
             else:
-                output_elements.append(ui.markdown("_El LLM no devolvió contenido textual o solo espacios en blanco._"))
-        else:
+                output_elements.append(ui.markdown("_El LLM no devolvió contenido textual procesable o solo espacios en blanco._"))
+        
+        # Si después de todo no hay nada que mostrar
+        if not output_elements:
             output_elements.append(ui.markdown("El proceso se completó, pero no se generaron resultados (ni tablas ni texto crudo). Por favor, verifica la URL y la descripción del parseo."))
-
         return ui.tags.div(*output_elements)
     # --- End Scraper/Parser Output Display ---
 
@@ -3104,7 +3870,7 @@ def server(input, output, session):
         return ui.p("Selecciona 'Google Maps' en el panel izquierdo y realiza una búsqueda para ver el mapa aquí.")
     
     # ''' Chat de Gemini'''
-    def _ensure_gemini_model():
+    def _ensure_gemini_model_():
         if gemini_model_instance.get() is None:
             if GEMINI_API_KEY:
                 try:
@@ -3181,6 +3947,7 @@ def server(input, output, session):
             current_gemini_response.set("Por favor escribe una pregunta")
             return
         if not _ensure_gemini_model():
+        #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
             return 
 
         model = gemini_model_instance.get()
@@ -3247,12 +4014,16 @@ def server(input, output, session):
             if mind_map_json_str.startswith("```json"):
                 mind_map_json_str = mind_map_json_str.replace("```json", "").replace("```", "").strip()
             
+            #print(f"DEBUG: Attempting to parse mind map JSON: '{mind_map_json_str}'")
             data = json.loads(mind_map_json_str)
             nodes = data.get("nodes", [])
             edges = data.get("edges", [])
 
             if not nodes:
                 mind_map_html.set("<p><i>No se pudieron extraer nodos para el mapa mental.</i></p>")
+                # También es útil imprimir esto en la consola
+                print("WARNING: No nodes found in parsed mind map JSON.")
+                print(f"DEBUG: Parsed data was: {data}")
                 return
 
             #net = Network(notebook=True, height="750px", width="100%", cdn_resources='remote', directed=True)
@@ -3266,21 +4037,83 @@ def server(input, output, session):
 
             # Guardar en un archivo temporal HTML y leer su contenido
             # Opciones de Pyvis para mejorar la visualización
-            net.set_options("""
-            var options = {
-              "nodes": {
-                "font": { "size": 12, "face": "Tahoma" }
-              },
-              "edges": {
-                "arrows": {"to": { "enabled": true, "scaleFactor": 0.5 }},
-                "smooth": { "type": "cubicBezier", "forceDirection": "vertical", "roundness": 0.4 }
-              },
-              "layout": { "hierarchical": { "enabled": true, "sortMethod": "directed", "shakeTowards": "roots" } }
+            #net.set_options("""
+            #var options = {
+            #  "nodes": {
+            #    "font": { "size": 12, "face": "Tahoma" }
+            #  },
+            #  "edges": {
+            #    "arrows": {"to": { "enabled": true, "scaleFactor": 0.5 }},
+            #    "smooth": { "type": "cubicBezier", "forceDirection": "vertical", "roundness": 0.4 }
+            #  },
+            #  "layout": { "hierarchical": { "enabled": true, "sortMethod": "directed", "shakeTowards": "roots" } }
+            #}
+            #""")
+
+
+            # Dejamos el set_options original por si acaso, pero lo sobreescribiremos
+
+            # Construir las opciones como un diccionario Python
+            pyvis_options = {
+                "nodes": {
+                    "font": {"size": 14, "face": "Tahoma", "color": "#333333"},
+                    "shape": "box",
+                    "margin": 10,
+                    "widthConstraint": {"maximum": 200}
+                },
+                "edges": {
+                    "arrows": {"to": {"enabled": True, "scaleFactor": 0.7}},
+                    "color": {"color": "#848484", "highlight": "#848484", "hover": "#848484", "inherit": False},
+                    "smooth": {"type": "cubicBezier", "forceDirection": "vertical", "roundness": 0.4}
+                },
+                "layout": {
+                    "hierarchical": {
+                        "enabled": True,
+                        "sortMethod": "directed",
+                        "shakeTowards": "roots",
+                        "direction": "UD",
+                        "levelSeparation": 150,
+                        "nodeSpacing": 100
+                    }
+                },
+                "interaction": {
+                    "dragNodes": True,
+                    "dragView": True,
+                    "zoomView": True,
+                    "navigationButtons": True,
+                    "tooltipDelay": 200
+                },
+                "physics": {
+                    "enabled": False
+                }
             }
-            """)
+            # Convertir el diccionario de Python a un string JSON
+            options_json_string = json.dumps(pyvis_options)
+
+            # Crear el string JavaScript para set_options
+            # Es importante que options_json_string se inserte tal cual, json.dumps ya se encarga de las comillas.
+            #js_options_string = f"var options = {options_json_string};"
+            js_options_string = f"var options = {options_json_string}"
+
+            net.set_options(js_options_string)
+
+
             html_content = net.generate_html()
             mind_map_html.set(html_content)
+        except json.JSONDecodeError as je:
+            print(f"ERROR: JSONDecodeError for mind map. Raw string was: '{mind_map_json_str}'")
+            print(f"ERROR: JSONDecodeError details: {je}")
+            # Mostrar el contexto del error si es posible
+            context_window = 20
+            error_pos = je.pos
+            context_start = max(0, error_pos - context_window)
+            context_end = min(len(je.doc), error_pos + context_window)
+            error_context = je.doc[context_start:context_end]
+            print(f"ERROR CONTEXT (around char {error_pos}): ...{error_context}...")
+            mind_map_html.set(f"<p><i>Error de formato JSON al generar el mapa mental: {str(je)}<br>Contexto del error (alrededor del carácter {error_pos}):<br><pre>...{error_context}...</pre><br>Respuesta JSON completa recibida:<br><pre>{mind_map_json_str}</pre></i></p>")
         except Exception as e:
+            print(f"ERROR: Failed to parse or visualize mind map JSON. Raw string was: '{mind_map_json_str}'")
+            print(f"ERROR: Exception details: {e}")
             mind_map_html.set(f"<p><i>Error al generar o visualizar el mapa mental: {str(e)}<br>Respuesta JSON recibida:<br><pre>{mind_map_json_str}</pre></i></p>")
 
     @output
@@ -3308,6 +4141,1113 @@ def server(input, output, session):
                 yield df_to_download.to_csv(index=False, encoding='utf-8-sig')
         else:
             yield "No hay datos para descargar"
+
+    @render.download(filename ='datos_exportados.xlsx')
+    async def download_data_excel():
+        df_to_download = None 
+        if input.platform_selector()=="scraper_parser_tab_internal":
+            results = scraper_parser_results.get()
+            if results and "merged_table" in results and isinstance(results["merged_table"], pd.DataFrame) and not results["merged_table"].empty:
+                if not (('Error' in results["merged_table"].columns and len(results["merged_table"])==1) or \
+                        ('Mensaje' in results["merged_table"].columns and len(results["merged_table"])==1)):
+                    df_to_download = results["merged_table"]                
+        if df_to_download is None:
+            current_df = processed_dataframe.get()
+            if isinstance(current_df, pd.DataFrame) and not current_df.empty:
+                if not (('Error' in current_df.columns and len(current_df)==1) or \
+                        ('Mensaje' in current_df.columns and len(current_df)==1)):
+                    df_to_download = current_df
+        if df_to_download is not None and isinstance(df_to_download, pd.DataFrame):
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_to_download.to_excel(writer, index=False, sheet_name="datos")            
+            yield output.getvalue()
+        else: 
+            yield "No hay datos válidos para descargar en formato Excel"
+
+
+    # --- Lógica del Módulo de Comparación ---
+    @output
+    @render.text
+    def active_session_id_for_comparison_display():
+        session_id = active_comparison_session_id.get()
+        if session_id:
+            return f"Comparando datos para la Sesión ID: {session_id}"
+        return "No hay sesión de comparación activa para mostrar. Inicia una desde la pestaña 'Base de Datos y Chatbot'."
+    @output
+    @render.text
+    def same_network_active_session_id_display():
+        platform = input.comparison_platform_selector()
+        queries = [
+            input.comparison_query_1(),
+            input.comparison_query_2(),
+            input.comparison_query_3(),
+            input.comparison_query_4(),
+            input.comparison_query_5(),
+        ]
+        queries = [q.strip() for q in queries if q.strip()]
+        
+        if platform and queries:
+            return f"Comparando en {platform.upper()}: {', '.join(queries)}"
+        elif platform:
+            return f"Plataforma seleccionada: {platform.upper()}. Ingrese tópicos para comparar."
+        return "Seleccione una plataforma e ingrese tópicos para comparar."
+
+
+    @output
+    @render.text
+    def active_session_id_for_comparison_chat_display():
+        session_id = active_comparison_session_id.get()
+        if session_id:
+            return f"Contexto del chat: Sesión ID {session_id}"
+        return "No hay sesión de comparación activa para el chatbot."
+
+
+    def fetch_and_analyze_comparison_data(platform: str, queries: TypingList[str]):
+        all_queries_data = {}
+        for i, query_text in enumerate(queries):
+            if not query_text.strip():
+                continue # Skip empty queries
+            
+            df_query = pd.DataFrame()
+            query_label = f"Query {i+1}: {query_text}" # Label for this specific query
+
+            try:
+                if platform == "twitter":
+                    df_query = _get_tweets_from_twitter_api(query_text)
+                elif platform == "youtube":
+                    df_query = _get_youtube_channels_and_comments(query_text, max_results_comments=5)
+                elif platform == "maps":
+                    df_query = _maps_comments(query_text)
+                # Add other platforms as needed
+
+                if not df_query.empty and not ('Error' in df_query.columns or 'Mensaje' in df_query.columns):
+                    # Add query label and apply analysis
+                    df_query['query_label'] = query_label
+                    df_query['sentiment'] = df_query[df_query.columns.intersection(['text', 'comment', 'content'])[0]].apply(generate_sentiment_analysis)
+                    df_query['emotion'] = df_query[df_query.columns.intersection(['text', 'comment', 'content'])[0]].apply(generate_emotions_analysis)
+                    
+                    # For topics, you might need a combined text from this specific query's DF
+                    collapsed_query_text = collapse_text(df_query)
+                    if collapsed_query_text:
+                        # This part might need to be adapted if topics_generator expects a single string
+                        # and generate_zero_shot_classification_with_labels expects candidate labels.
+                        # For simplicity, let's assume a general topic classification for now.
+                        # Or, if topics_generator returns a list of labels, use that.
+                        # For now, let's just use a placeholder or skip if topics are too complex for this direct application.
+                        df_query['topics'] = "No aplica en comparación" # Placeholder
+                    
+                    all_queries_data[query_label] = df_query
+                else:
+                    print(f"No data or error for query '{query_text}' on platform '{platform}'.")
+            except Exception as e:
+                print(f"Error fetching data for query '{query_text}' on platform '{platform}': {e}")
+        return all_queries_data
+
+   ## Funciones de sesión
+    @reactive.Effect
+    @reactive.event(input.execute_cross_source_comparison)
+    async def _execute_comparison_logic():
+        session_id = active_comparison_session_id.get()
+        if not session_id:
+            ui.notification_show("No hay una sesión de comparación activa.", type="warning", duration=5)
+            # Limpia los reactivos de este módulo si no hay sesión
+            comparison_data_r.set(None)
+            comparison_chat_history_r.set([])
+            infographic_status_r.set("")
+            comparison_summary_r.set("Por favor, active una sesión de comparación y ejecute algunas búsquedas primero.")
+            return
+        ui.notification_show(f"Generando comparación para la sesión: {session_id[:8]}...", type="info", duration=4)
+        # Obtiene todos los datos de diferentes tablas para el session_id actual
+        fetched_data = fetch_comparison_data(session_id)
+        comparison_data_r.set(fetched_data)
+
+        if not fetched_data or all(df.empty for df in fetched_data.values()):
+            ui.notification_show(f"No se encontraron datos para la sesión ID: {session_id}", type="warning", duration=5)
+            comparison_chat_history_r.set([])
+            infographic_status_r.set("")
+            comparison_summary_r.set(f"No se encontraron datos para la sesión ID: {session_id}")
+            return
+
+        # Genera el resumen, especificando que NO es una comparación en la misma red
+        summary = get_comparison_summary_gemini(fetched_data, is_same_network=False)
+        comparison_summary_r.set(summary)
+        
+        # Prepara el historial del chatbot para este módulo
+        ui.notification_show("Resumen comparativo entre fuentes generado.", type="success", duration=5)
+        comparison_chat_history_r.set([
+            {"role": "model", "parts": [{"text": f"Hola. Estoy listo para responder preguntas sobre los datos de la sesión de comparación (ID: {session_id[:8]}). El resumen general está en la pestaña 'Análisis General Comparativo'."}]}
+        ])
+
+    @reactive.Effect
+    @reactive.event(input.execute_same_network_comparison)
+    async def handle_same_network_comparison():
+        """
+        Orquesta la comparación de diferentes consultas dentro de la misma red social.
+        1. Recopila las consultas y la plataforma desde la UI.
+        2. Llama a `fetch_and_analyze_comparison_data_same_network` para scrapear y analizar los datos para cada consulta.
+        3. Almacena los datos obtenidos en `same_network_comparison_data_r`.
+        4. Genera un resumen con Gemini, indicando que es una comparación en la misma red (`is_same_network=True`).
+        5. Almacena el resumen y prepara el historial del chatbot para este módulo específico.
+        """
+        queries = [
+            input.comparison_query_1(),
+            input.comparison_query_2(),
+            input.comparison_query_3()#,
+            #input.comparison_query_4(),
+            #input.comparison_query_5(),
+        ]
+        queries = [q.strip() for q in queries if q.strip()]
+        platform = input.comparison_platform_selector()
+
+        if not queries or not platform:
+            ui.notification_show("Por favor, seleccione una plataforma e ingrese al menos una marca/tópico para comparar.", type="warning", duration=5)
+            same_network_comparison_data_r.set(None)
+            same_network_comparison_summary_r.set("No hay datos para comparar. Ingrese los parámetros requeridos.")
+            return
+
+        ui.notification_show(f"Generando comparación para {platform} con las queries: {', '.join(queries)}...", type="info", duration=5)
+        
+        # Obtiene y analiza nuevos datos para las consultas especificadas
+        all_queries_data = await fetch_and_analyze_comparison_data_same_network(platform, queries)
+        same_network_comparison_data_r.set(all_queries_data)
+
+        if not all_queries_data or all(df.empty for df in all_queries_data.values()):
+            ui.notification_show(f"No se encontraron datos para las queries especificadas en {platform}.", type="warning", duration=5)
+            same_network_comparison_chat_history_r.set([])
+            same_network_infographic_status_r.set("")
+            same_network_comparison_summary_r.set(f"No se encontraron datos para las queries especificadas en {platform}.")
+            return
+
+        # Genera el resumen, especificando que SÍ es una comparación en la misma red
+        summary = get_comparison_summary_gemini(all_queries_data, is_same_network=True)
+        same_network_comparison_summary_r.set(summary)
+        
+        # Prepara el historial del chatbot para este módulo
+        ui.notification_show("Comparación en la misma red generada.", type="success", duration=5)
+        same_network_comparison_chat_history_r.set([
+            {"role": "model", "parts": [{"text": f"Hola, estoy listo para responder preguntas sobre la comparación de {platform} para las queries: {', '.join(queries)}."}]}
+        ])
+
+
+    """
+    @reactive.Effect
+    @reactive.event(input.execute_same_network_comparison)
+    async def handle_same_network_comparison(): 
+    #async def _execute_comparison_logic():
+        session_id = active_comparison_session_id.get()
+        if not session_id:
+            return 
+        #if not session_id:
+        #    ui.notification_show("No hay una sesión de comparación activa.", type="warning", duration=5)
+        #    comparison_data_r.set(None)
+        #    comparison_chat_history_r.set([]) # Limpiar historial del chat si no hay sesión
+        #    infographic_status_r.set("")            
+        #    comparison_summary_r.set("Por favor, active una sesión de comparación y ejecute algunas búsquedas primero.")
+        #    return
+
+        ui.notification_show(f"Generando comparación para la sesión: {session_id[:8]}...", type="info", duration=3)
+        
+        # Simular trabajo asíncrono si es necesario para no bloquear la UI
+        # await asyncio.sleep(0.1) 
+        fetched_data = None
+        #fetched_data = fetch_comparison_data(session_id)
+        #comparison_data_r.set(fetched_data)
+
+        #if not fetched_data or all(df.empty for df in fetched_data.values()):
+        #    ui.notification_show(f"No se encontraron datos para la sesión ID: {session_id}", type="warning", duration=5)
+        #    comparison_chat_history_r.set([])
+        #    infographic_status_r.set("")
+        #    comparison_summary_r.set(f"No se encontraron datos para la sesión ID: {session_id}")
+        #    return
+        queries = [
+            input.comparison_query_1(),
+            input.comparison_query_2(),
+            input.comparison_query_3(),
+            input.comparison_query_4(),
+            input.comparison_query_5(),
+        ]
+        queries = [q.strip() for q in queries if q.strip()] 
+
+        if not queries:
+            ui.notification_show("Por favor, ingrese al menos una marca/tópico para comparar.", type="warning", duration=5)
+            comparison_data_r.set(None)
+            same_network_comparison_summary_r.set("No hay datos para comparar. Ingrese al menos una marca/tópico.")
+            #comparison_summary_r.set("No hay datos para comparar. Ingrese al menos una marca/tópico.")
+            return
+        
+        platform = input.comparison_platform_selector()
+        if not platform:
+            ui.notification_show("Por favor, seleccione una plataforma para comparar.", type="warning", duration=5)
+            comparison_data_r.set(None)
+            #comparison_summary_r.set("No hay datos para comparar. Seleccione una plataforma.")
+            same_network_comparison_summary_r.set("No hay datos para comparar. Ingrese al menos una marca/tópico.")
+
+            return          
+        ui.notification_show(f"Generando comparación para {platform} con las queries: {', '.join(queries)}...", type="info", duration=5)          
+        #all_queries_data = fetch_and_analyze_comparison_data(platform, queries)
+        all_queries_data = await fetch_and_analyze_comparison_data_same_network(platform, queries)
+
+        #comparison_data_r.set(all_queries_data)
+        same_network_comparison_data_r.set(all_queries_data)
+        if not all_queries_data or all(df.empty for df in all_queries_data.values()):
+            ui.notification_show(f"No se encontraron datos para las queries especificadas en {platform}.", type="warning", duration=5)
+            comparison_chat_history_r.set([])
+            infographic_status_r.set("")
+            #comparison_summary_r.set(f"No se encontraron datos para la sesión ID: {session_id}")
+            same_network_comparison_summary_r.set(f"No se encontraron datos para las queries especificadas en {platform}.") # CHANGED: Use same_network summary
+            return 
+        # Generar resumen comparativo con Gemini
+        #summary = get_comparison_summary_gemini(fetched_data)
+        #summary = get_comparison_summary_gemini(all_queries_data)
+        #summary = get_comparison_summary_gemini(fetched_data, is_same_network=False)
+        summary = get_comparison_summary_gemini(all_queries_data, is_same_network=True)
+
+        #summary = get_comparison_summary_gemini(all_queries_data, is_same_network=True)
+        #comparison_summary_r.set(summary)
+        same_network_comparison_summary_r.set(summary)
+        #ui.notification_show("Resumen comparativo generado.", type="success", duration=4)
+        #comparison_chat_history_r.set([{"role": "model", "parts": [{"text": f"Resumen inicial de la comparación (Sesión {session_id[:8]}):\n{summary}"}]}])
+        #ui.notification_show("Resumen comparativo generado y disponible en 'Análisis General'.", type="success", duration=5)
+        #comparison_chat_history_r.set([{"role": "model", "parts": [{"text": f"Hola. Estoy listo para responder preguntas sobre los datos de la sesión de comparación (ID: {session_id[:8]}). El resumen general está en la pestaña 'Análisis General Comparativo'."}]}])
+        ui.notification_show("Comparación generada y resumen disponible.", type="success", duration=5)
+        #comparison_chat_history_r.set([{"role": "model", "parts": [{"text": f"Hola. Estoy listo para responder preguntas sobre los datos de la comparación de {platform} para las queries: {', '.join(queries)}."}]}])
+        same_network_comparison_chat_history_r.set([{"role": "model", "parts":[{"text": f"Hola, Estoy listo para responder preguntas sobre los datos de la comparación de {platform} para las queries: {', '.join(queries)}."}]}])
+    """
+
+    def get_comparison_summary_gemini(all_data_dict: Dict[str, pd.DataFrame], is_same_network: bool):
+        #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
+        if not _ensure_gemini_model():
+            return "Error: Modelo de Gemini no disponible."
+
+        gemini_model = gemini_model_instance.get()
+        full_text_for_comparison = ""
+        if is_same_network:
+            task_description = "Has recopilado datos de la misma red social para diferentes marcas o tópicos. Tu tarea es comparar y contrastar las opiniones, sentimientos y temas clave entre estas marcas/tópicos. Los datos se agrupan por la marca/tópico."
+            for query_label, df_source in all_data_dict.items():
+                if not df_source.empty:
+                    text_col = None
+                    # Determine the text column dynamically
+                    if 'text' in df_source.columns: text_col = 'text'
+                    elif 'comment' in df_source.columns: text_col = 'comment'
+                    elif 'content' in df_source.columns: text_col = 'content'
+                    if text_col:
+                        source_text = " ".join(df_source[text_col].dropna().astype(str).tolist())
+                        if source_text.strip():
+                            #full_text_for_comparison += f"\n\n--- Datos de {origin_value} ---\n{source_text[:2000]}..." # Limitar texto por fuente
+                            full_text_for_comparison += f"\n\n--- Datos para '{query_label}' ---\n{source_text[:2000]}..." # Limit text per query
+        else:
+            task_description = "Has recopilado datos de varias fuentes sobre temas posiblemente relacionados. Tu tarea es generar un resumen sintetizado que compare y contraste las ideas principales, sentimientos predominantes y temas clave entre las diferentes fuentes. Los datos se agrupan por la fuente de origen."
+            for _table_name, df_source in all_data_dict.items():
+                if not df_source.empty and 'origin' in df_source.columns:
+                    origin_value = df_source['origin'].iloc[0] if not df_source['origin'].empty else "Fuente Desconocida"
+                    text_col = None
+                    if 'text' in df_source.columns: text_col = 'text'
+                    elif 'comment' in df_source.columns: text_col = 'comment'
+                    elif 'content' in df_source.columns: text_col = 'content'
+
+                    if text_col:
+                        source_text = " ".join(df_source[text_col].dropna().astype(str).tolist())
+                        if source_text.strip():
+                            full_text_for_comparison += f"\n\n--- Datos de {origin_value} ---\n{source_text[:2000]}..." # Limitar texto por fuente
+
+
+        if not full_text_for_comparison.strip():
+            return "No hay texto combinado de las fuentes para resumir."
+
+        max_len_prompt = 15000 
+        if len(full_text_for_comparison) > max_len_prompt:
+            full_text_for_comparison = full_text_for_comparison[:max_len_prompt] + "\n...(texto truncado)..."
+
+        comparison_prompt = (
+            f"Eres un analista experto. {task_description}\n\n"
+            "A continuación, se presenta un conjunto de textos extraídos. "
+            "Tu tarea es generar un resumen sintetizado que compare y contraste las ideas principales, sentimientos predominantes y temas clave entre las diferentes fuentes. "
+            "Destaca similitudes, diferencias y cualquier patrón interesante que observes.\n\n"
+            f"Textos combinados de las fuentes:\n{full_text_for_comparison}\n\n"
+            "Resumen Comparativo Sintetizado:"
+        )
+        
+        try:
+            print(f"Enviando a Gemini para resumen comparativo: {comparison_prompt[:300]}...")
+            response = gemini_model.generate_content(comparison_prompt)
+            return response.text
+        except Exception as e:
+            return f"Error al generar resumen comparativo con Gemini: {e}"
+
+
+    """
+    #def get_comparison_summary_gemini(all_data_dict: Dict[str, pd.DataFrame]):
+    def get_comparison_summary_gemini(all_data_dict: Dict[str, pd.DataFrame], is_same_network: bool):
+        if not _ensure_gemini_model():
+            return "Error: Modelo de Gemini no disponible."
+
+        gemini_model = gemini_model_instance.get()
+        full_text_for_comparison = ""
+        if is_same_network:
+            task_description = "Has recopilado datos de la misma red social para diferentes marcas o tópicos. Tu tarea es comparar y contrastar las opiniones, sentimientos y temas clave entre estas marcas/tópicos."
+            task_description = "Has recopilado datos de la misma red social para diferentes marcas o tópicos. Tu tarea es comparar y contrastar las opiniones, sentimientos y temas clave entre estas marcas/tópicos. Los datos se agrupan por la marca/tópico."
+        else:
+            task_description = "Has recopilado datos de varias fuentes sobre temas posiblemente relacionados. Tu tarea es generar un resumen sintetizado que compare y contraste las ideas principales, sentimientos predominantes y temas clave entre las diferentes fuentes."
+            task_description = "Has recopilado datos de varias fuentes sobre temas posiblemente relacionados. Tu tarea es generar un resumen sintetizado que compare y contraste las ideas principales, sentimientos predominantes y temas clave entre las diferentes fuentes. Los datos se agrupan por la fuente de origen."
+
+        # Iterate through the dictionary where keys are query_labels and values are DataFrames
+        for query_label, df_source in all_data_dict.items():
+            if not df_source.empty:
+                text_col = None
+                # Determine the text column dynamically
+                if 'text' in df_source.columns: text_col = 'text'
+                elif 'comment' in df_source.columns: text_col = 'comment'
+                elif 'content' in df_source.columns: text_col = 'content'
+                if text_col:
+                    source_text = " ".join(df_source[text_col].dropna().astype(str).tolist())
+                    if source_text.strip():
+                        #full_text_for_comparison += f"\n\n--- Datos de {origin_value} ---\n{source_text[:2000]}..." # Limitar texto por fuente
+                        full_text_for_comparison += f"\n\n--- Datos para '{query_label}' ---\n{source_text[:2000]}..." # Limit text per query
+
+        full_text_for_comparison = ""
+        for _table_name, df_source in all_data_dict.items():
+            if not df_source.empty and 'origin' in df_source.columns:
+                origin_value = df_source['origin'].iloc[0] if not df_source['origin'].empty else "Fuente Desconocida"
+                text_col = None
+                if 'text' in df_source.columns: text_col = 'text'
+                elif 'comment' in df_source.columns: text_col = 'comment'
+                elif 'content' in df_source.columns: text_col = 'content'
+
+                if text_col:
+                    source_text = " ".join(df_source[text_col].dropna().astype(str).tolist())
+                    if source_text.strip():
+                        full_text_for_comparison += f"\n\n--- Datos de {origin_value} ---\n{source_text[:2000]}..." # Limitar texto por fuente
+                        #full_text_for_comparison += f"\n\n--- Datos para '{query_label}' ---\n{source_text[:2000]}..." # Limit text per query
+
+
+        if not full_text_for_comparison.strip():
+            return "No hay texto combinado de las fuentes para resumir."
+
+        max_len_prompt = 15000 
+        if len(full_text_for_comparison) > max_len_prompt:
+            full_text_for_comparison = full_text_for_comparison[:max_len_prompt] + "\n...(texto truncado)..."
+
+        comparison_prompt = (
+            f"Eres un analista experto. {task_description}\n"
+            "A continuación, se presenta un conjunto de textos extraídos. "
+            "Tu tarea es generar un resumen sintetizado que compare y contraste las ideas principales, sentimientos predominantes y temas clave entre las diferentes fuentes. "
+            "Destaca similitudes, diferencias y cualquier patrón interesante que observes.\n\n"
+            f"Textos combinados de las fuentes:\n{full_text_for_comparison}\n\n"
+            "Resumen Comparativo Sintetizado:"
+        )
+        
+        try:
+            print(f"Enviando a Gemini para resumen comparativo: {comparison_prompt[:300]}...")
+            response = gemini_model.generate_content(comparison_prompt)
+            return response.text
+        except Exception as e:
+            return f"Error al generar resumen comparativo con Gemini: {e}"
+    """
+
+    @output
+    @render.ui
+    def comparison_summary_output():
+        summary = comparison_summary_r.get()
+        if not summary:
+            return ui.p("Presiona 'Generar Comparación' para ver el resumen.")
+        return ui.card(
+            ui.card_header("Resumen Comparativo (Gemini)"),
+            ui.markdown(summary)
+        )
+    @output
+    @render.ui
+    def same_network_comparison_summary_output(): # NEW: Separate summary output for same network
+        summary = same_network_comparison_summary_r.get()
+        if not summary: return ui.p("Presiona 'Generar Comparación' para ver el resumen.")
+        return ui.card(
+            ui.card_header("Resumen Comparativo Misma Red (Gemini)"),
+            ui.markdown(summary)
+        )
+
+    def plot_comparison_stacked_bar(all_data_dict: Dict[str, pd.DataFrame], column_name: str, title: str, category_orders_dict: Dict = None, color_discrete_map_dict: Dict = None, x_axis_type: str = 'origin'):
+    #def plot_comparison_stacked_bar(all_data_dict: Dict[str, pd.DataFrame], column_name: str, title: str, category_orders_dict: Dict = None, color_discrete_map_dict: Dict = None):
+        plot_data_list = []
+        if not all_data_dict: # Si all_data_dict es None o vacío
+            all_data_dict = {}
+
+        #for _table_name, df_source in all_data_dict.items():
+        #for query_label, df_source in all_data_dict.items():
+        for key_label, df_source in all_data_dict.items():
+            if isinstance(df_source, pd.DataFrame) and not df_source.empty and column_name in df_source.columns and 'origin' in df_source.columns:
+                counts = df_source[column_name].value_counts(dropna=False).reset_index()
+                counts.columns = [column_name, 'count']
+                if x_axis_type=='origin':
+                    counts['x_axis_label'] = df_source['origin'].iloc[0] if 'origin' in df_source.columns and not df_source['origin'].empty else key_label
+                elif x_axis_type=='query':
+                    counts['x_axis_label'] = key_label
+                else:
+                    counts['x_axis_label'] = 'Desconocido'
+                plot_data_list.append(counts)
+
+        if not plot_data_list:
+            fig = go.Figure()
+            #fig.update_layout(title=f"{title} (Sin datos)", xaxis_title="Origen", yaxis_title="Porcentaje")
+            fig.update_layout(title=f"{title} (Sin datos)", xaxis_title="Categoría", yaxis_title="Porcentaje")
+            return fig
+
+        combined_df = pd.concat(plot_data_list).fillna({column_name: "No especificado"}) # Rellenar NaNs en la columna de categoría
+        
+        #total_counts_per_origin = combined_df.groupby('origin')['count'].sum().reset_index(name='total_count')
+        #combined_df = pd.merge(combined_df, total_counts_per_origin, on='origin', how='left')
+        #combined_df['percentage'] = (combined_df['count'] / combined_df['total_count'].replace(0, 1)) * 100 # Evitar división por cero
+        #total_counts_per_query = combined_df.groupby('query_label')['count'].sum().reset_index(name='total_query_count')
+        total_counts_per_x_label = combined_df.groupby('x_axis_label')['count'].sum().reset_index(name='total_count')
+        combined_df = pd.merge(combined_df, total_counts_per_x_label, on='x_axis_label', how='left')
+        combined_df['percentage'] = (combined_df['count'] / combined_df['total_count'].replace(0, 1)) * 100        
+        combined_df = combined_df.fillna(0)
+        x_axis_title = "Plataforma de Origen" if x_axis_type == 'origin' else "Marca/Tópico"
+
+        fig = px.bar(combined_df, x='x_axis_label', y='percentage', color=column_name,
+                     title=title,
+                     labels={'x_axis_label': x_axis_title, 'percentage': 'Porcentaje (%)', column_name: column_name.capitalize()},
+                     category_orders=category_orders_dict if category_orders_dict else None,
+                     color_discrete_map=color_discrete_map_dict if color_discrete_map_dict else None,
+                     text='percentage')
+        fig.update_traces(texttemplate='%{text:.1f}%', textposition='inside')
+        fig.update_layout(yaxis_ticksuffix='%', barmode='stack', legend_title_text=column_name.capitalize())
+        return fig
+
+    @output
+    @render_plotly
+    def comparison_sentiment_plot():
+        data_dict = comparison_data_r.get()
+        sentiment_categories = ['Positivo', 'Neutral', 'Negativo', "Error: Análisis de sentimiento (Pysentimiento) fallido", "Error: Modelos de sentimiento no disponibles", "No especificado"]
+        sentiment_colors = {
+            'Positivo': '#2ECC71', 'Neutral': '#F1C40F', 'Negativo': '#E74C3C',
+            "Error: Análisis de sentimiento (Pysentimiento) fallido": "#CCCCCC",
+            "Error: Modelos de sentimiento no disponibles": "#AAAAAA",
+            "No especificado": "#DDDDDD"
+        }
+        return plot_comparison_stacked_bar(data_dict, 'sentiment', 'Comparación de Sentimientos por Origen', 
+                                           category_orders_dict={'sentiment': sentiment_categories},
+                                           color_discrete_map_dict=sentiment_colors, x_axis_type='origin')
+
+    @output
+    @render_plotly
+    def comparison_emotion_plot():
+        data_dict = comparison_data_r.get()
+        emotion_categories_es = ["Alegría", "Tristeza", "Enojo", "Miedo", "Sorpresa", "Asco", "Neutral", "Desconocida", "Error: Análisis de emociones fallido", "No especificado"]
+        emotion_palette_es = {
+            "Alegría": "#4CAF50", "Tristeza": "#2196F3", "Enojo": "#F44336", "Miedo": "#9C27B0",
+            "Sorpresa": "#FFC107", "Asco": "#795548", "Neutral": "#9E9E9E", "Desconocida": "#607D8B",
+            "Error: Análisis de emociones fallido": "#CCCCCC", "No especificado": "#DDDDDD"
+        }
+        #return plot_comparison_stacked_bar(data_dict, 'emotion', 'Comparación de Emociones por Origen',
+        return plot_comparison_stacked_bar(data_dict, 'emotion', 'Comparación de Emociones por Marca/Tópico',
+                                           category_orders_dict={'emotion': emotion_categories_es})
+
+    
+    
+    """
+    def plot_topics_comparison_grouped_bar(all_data_dict: Dict[str, pd.DataFrame], title: str, x_axis_type: str = 'origin'):   
+        plot_data_list = []
+        if not all_data_dict: all_data_dict = {}
+
+        #for _table_name, df_source in all_data_dict.items():
+        #for query_label, df_source in all_data_dict.items(): 
+        #    if isinstance(df_source, pd.DataFrame) and not df_source.empty and 'topics' in df_source.columns and 'origin' in df_source.columns:
+        #         origin_value = df_source['origin'].iloc[0] if not df_source['origin'].empty else "Desconocido"
+        for key_label, df_source in all_data_dict.items():
+                if isinstance(df_source, pd.DataFrame) and not df_source.empty and 'topics' in df_source.columns:
+                    if x_axis_type == 'origin':
+                        counts['x_axis_group'] = df_source['origin'].iloc[0] if not df_source['origin'].empty else "Desconocido"
+                    elif x_axis_type == 'query':
+                        counts['x_axis_group'] = key_label
+                    else: 
+                        counts['x_axis_group'] = 'Desconocido'
+                    counts = df_source['topics'].value_counts(dropna=False).reset_index()
+                    counts.columns = ['topic', 'count']
+            #        counts['origin'] = origin_value
+                    plot_data_list.append(counts)
+
+        if not plot_data_list:
+            fig = go.Figure()
+            fig.update_layout(title=f"{title} (Sin datos)", xaxis_title="Tópico", yaxis_title="Conteo")
+            return fig
+
+        combined_df = pd.concat(plot_data_list).fillna({'topic': "No especificado"})
+        
+        # Limitar a los N tópicos más frecuentes en general para evitar gráficos muy cargados
+        top_n_topics = 15
+        overall_topic_counts = combined_df.groupby('topic')['count'].sum().nlargest(top_n_topics).index
+        combined_df_filtered = combined_df[combined_df['topic'].isin(overall_topic_counts)]
+
+        x_axis_title = "Plataforma de Origen" if x_axis_type=='origin' else 'Marca/Tópico'
+        fig = px.bar(combined_df_filtered, x='topic', y='count', color='x_axis_group',
+        #fig = px.bar(combined_df_filtered, x='topic', y='count', color='origin',
+                     title=title,
+                     labels={'topic': 'Tópico', 'count': 'Número de Menciones', 'x_axis_group': x_axis_title},
+                     #labels={'topic': 'Tópico', 'count': 'Número de Menciones', 'origin': 'Plataforma de Origen'},
+                     barmode='group')
+        fig.update_xaxes(categoryorder='total descending', tickangle=-45)
+        return fig
+    """
+    ### Funcion anterior para evaluar 
+    def plot_topics_comparison_grouped_bar(all_data_dict: Dict[str, pd.DataFrame], title: str):
+        plot_data_list = []
+        if not all_data_dict: all_data_dict = {}
+
+        for _table_name, df_source in all_data_dict.items():
+            if isinstance(df_source, pd.DataFrame) and not df_source.empty and 'topics' in df_source.columns and 'origin' in df_source.columns:
+                origin_value = df_source['origin'].iloc[0] if not df_source['origin'].empty else "Desconocido"
+                counts = df_source['topics'].value_counts(dropna=False).reset_index()
+                counts.columns = ['topic', 'count']
+                counts['origin'] = origin_value
+                plot_data_list.append(counts)
+
+        if not plot_data_list:
+            fig = go.Figure()
+            fig.update_layout(title=f"{title} (Sin datos)", xaxis_title="Tópico", yaxis_title="Conteo")
+            return fig
+
+        combined_df = pd.concat(plot_data_list).fillna({'topic': "No especificado"})
+        
+        # Limitar a los N tópicos más frecuentes en general para evitar gráficos muy cargados
+        top_n_topics = 15
+        overall_topic_counts = combined_df.groupby('topic')['count'].sum().nlargest(top_n_topics).index
+        combined_df_filtered = combined_df[combined_df['topic'].isin(overall_topic_counts)]
+
+        fig = px.bar(combined_df_filtered, x='topic', y='count', color='origin',
+                     title=title,
+                     labels={'topic': 'Tópico', 'count': 'Número de Menciones', 'origin': 'Plataforma de Origen'},
+                     barmode='group')
+        fig.update_xaxes(categoryorder='total descending', tickangle=-45)
+        return fig
+
+
+    @output
+    @render_plotly
+    def comparison_topics_plot():
+        data_dict = comparison_data_r.get()
+        return plot_topics_comparison_grouped_bar(data_dict, 'Comparación de Tópicos por Origen')
+        #return plot_topics_comparison_grouped_bar(data_dict, 'Comparación de Tópicos por Origen', x_axis_type='origin')
+
+    # --- Inicio Lógica del Chatbot Comparativo ---
+    ### AQUI
+    # --- Lógica para el Chatbot Comparativo ---
+    # --- Nuevos plots para la comparación en la misma red ---
+    @output
+    @render_plotly
+    def same_network_sentiment_plot():
+        data_dict = same_network_comparison_data_r.get() # CAMBIADO
+        sentiment_categories = ['Positivo', 'Neutral', 'Negativo', "Error: Análisis de sentimiento (Pysentimiento) fallido", "Error: Modelos de sentimiento no disponibles", "No especificado"]
+        sentiment_colors = {
+            'Positivo': '#2ECC71', 'Neutral': '#F1C40F', 'Negativo': '#E74C3C',
+            "Error: Análisis de sentimiento (Pysentimiento) fallido": "#CCCCCC",
+            "Error: Modelos de sentimiento no disponibles": "#AAAAAA",
+            "No especificado": "#DDDDDD"
+        }
+        #return plot_comparison_stacked_bar(data_dict, 'sentiment', 'Comparación de Sentimientos por Marca/Tópico',
+        #return plot_comparison_stacked_bar(data_dict, 'emotion', 'Comparación de Emociones por Origen', # This is for cross-source comparison
+        return plot_comparison_stacked_bar(data_dict, 'sentiment', 'Comparación de Sentimientos por Marca/Tópico',
+                                           category_orders_dict={'sentiment': sentiment_categories},
+                                           color_discrete_map_dict=sentiment_colors, x_axis_type='query')
+
+    @output
+    @render_plotly
+    def same_network_emotion_plot():
+        data_dict = same_network_comparison_data_r.get() # CAMBIADO
+        emotion_categories_es = ["Alegría", "Tristeza", "Enojo", "Miedo", "Sorpresa", "Asco", "Neutral", "Desconocida", "Error: Análisis de emociones fallido", "No especificado"]
+        emotion_palette_es = {
+            "Alegría": "#4CAF50", "Tristeza": "#2196F3", "Enojo": "#F44336", "Miedo": "#9C27B0",
+            "Sorpresa": "#FFC107", "Asco": "#795548", "Neutral": "#9E9E9E", "Desconocida": "#607D8B",
+            "Error: Análisis de emociones fallido": "#CCCCCC", "No especificado": "#DDDDDD"
+        }
+        return plot_comparison_stacked_bar(data_dict, 'emotion', 'Comparación de Emociones por Marca/Tópico',
+                                           category_orders_dict={'emotion': emotion_categories_es},
+                                           color_discrete_map_dict=emotion_palette_es, x_axis_type='query')
+
+    @output
+    @render_plotly
+    def same_network_topics_plot():
+        data_dict = same_network_comparison_data_r.get() # CAMBIADO
+        return plot_topics_comparison_grouped_bar(data_dict, 'Comparación de Tópicos por Marca/Tópico', x_axis_type='query')
+
+    # --- Lógica del Chatbot Comparativo entre Fuentes (Original) ---
+    @output
+    @render.text # NEW: Separate chat display for cross-source
+    def active_session_id_for_cross_source_comparison_chat_display():
+        session_id = active_comparison_session_id.get()
+        if session_id:
+            return f"Contexto del chat: Sesión ID {session_id}"
+        return "No hay sesión de comparación activa para el chatbot."
+    
+    @reactive.Effect
+    @reactive.event(input.ask_comparison_chat)
+    async def _handle_comparison_chat():
+        user_prompt = input.comparison_chat_prompt()
+        print(f"DEBUG: ask_comparison_chat triggered. User prompt: '{user_prompt}'") # DEBUG
+        session_id = active_comparison_session_id.get()
+        current_user = usuario_autenticado.get()
+
+        if not current_user:
+            ui.notification_show("Debes iniciar sesión para usar el chatbot.", type="error", duration=5)
+            return
+        if not session_id:
+            ui.notification_show("No hay una sesión de comparación activa para el chatbot.", type="warning", duration=5)
+            print("DEBUG: _handle_comparison_chat returning - no session_id") # DEBUG
+            return
+        if not user_prompt:
+            ui.notification_show("Por favor, escribe una pregunta.", type="warning", duration=3)
+            print("DEBUG: _handle_comparison_chat returning - no user_prompt") # DEBUG
+            return
+        if not _ensure_gemini_model():
+        #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
+            #ui.notification_show("Modelo Gemini no disponible.", type="error", duration=5)
+            ui.notification_show("Modelo Gemini no disponible para el chat comparativo.", type="error", duration=5)
+            print("DEBUG: _handle_comparison_chat returning - gemini model not ensured") # DEBUG
+            return
+
+        gemini_model_chat = gemini_model_instance.get() # Asumimos que es un modelo que soporta chat (historial)
+        print("DEBUG: Gemini model instance for chat obtained.") # DEBUG
+        
+        # Construir contexto de los datos de comparación
+        data_for_chat_context = comparison_data_r.get()
+        context_text_parts = []
+        if data_for_chat_context:
+            #for origin, df_source in data_for_chat_context.items():
+            for query_label, df_source in data_for_chat_context.items():
+                if isinstance(df_source, pd.DataFrame) and not df_source.empty:
+                    text_col = None
+                    if 'text' in df_source.columns: text_col = 'text'
+                    elif 'comment' in df_source.columns: text_col = 'comment'
+                    elif 'content' in df_source.columns: text_col = 'content'
+                    
+                    if text_col:
+                        # Tomar una muestra o un resumen breve de cada fuente para el contexto
+                        #sample_texts = df_source[text_col].dropna().astype(str).sample(min(len(df_source), 3), random_state=42 if len(df_source) >=3 else None).tolist() 
+                        sample_texts = df_source[text_col].dropna().astype(str).sample(min(len(df_source), 10), random_state=42 if len(df_source) >=10 else None).tolist()                        
+                        #sample_texts = df_source[text_col].dropna().astype(str).sample(min(len(df_source), 3)).tolist()
+                        if sample_texts:
+                            #context_text_parts.append(f"Extractos de '{origin}':\n" + "\n".join([f"- {s[:150]}..." for s in sample_texts]))
+                            context_text_parts.append(f"Extractos de '{query_label}':\n" + "\n".join([f"- {s[:150]}..." for s in sample_texts]))
+        
+        full_context_str = "\n\n".join(context_text_parts)
+        if not full_context_str:
+            full_context_str = "No hay datos específicos cargados para esta sesión de comparación, pero puedes preguntar sobre el resumen general si se generó."
+        print(f"DEBUG: Chat context string length: {len(full_context_str)}") # DEBUG
+
+        # Actualizar historial y preparar para la API de Gemini
+        #current_history = comparison_chat_history_r.get()
+        #current_history.append({"role": "user", "parts": [{"text": user_prompt}]})
+        old_history = comparison_chat_history_r.get()
+        current_history = old_history + [{"role": "user", "parts": [{"text": user_prompt}]}]
+
+        comparison_chat_history_r.set(current_history) # Actualizar UI con la pregunta del usuario inmediatamente
+
+        # Limitar el tamaño del historial para no exceder límites de la API
+        MAX_HISTORY_TURNS = 10 # 5 pares de user/model
+        history_for_gemini = current_history.copy()
+        if len(history_for_gemini) > MAX_HISTORY_TURNS * 2:
+            #history_for_gemini = [history_for_gemini[0]] + history_for_gemini[-(MAX_HISTORY_TURNS * 2 -1):]
+            history_for_gemini = history_for_gemini[-(MAX_HISTORY_TURNS * 2):]
+
+
+        #context_message_for_gemini = {"role": "user", "parts": [f"Considera el siguiente contexto de datos de la sesión de comparación (ID: {session_id[:8]}):\n{full_context_str}\n\nAhora, responde a las preguntas del usuario basándote en este contexto y el historial de conversación."]}
+        context_message_for_gemini = {"role": "user", "parts": [f"Considera el siguiente contexto de datos de la sesión de comparación (ID: {session_id[:8] if session_id else 'N/A'}):\n{full_context_str}\n\nAhora, responde a las preguntas del usuario basándote en este contexto y el historial de conversación."]}
+        final_content_for_gemini = [context_message_for_gemini] + history_for_gemini
+
+        ui.notification_show("Procesando pregunta con el chatbot comparativo...", type="info", duration=2)
+        print("DEBUG: Sending request to Gemini for comparison chat...") # DEBUG
+        try:
+            # Para modelos como gemini-1.5-flash, pasamos el historial directamente
+            # Por ahora, pasaremos el historial completo.
+            # response = gemini_model_chat.generate_content(current_history) # Si el modelo soporta historial directamente
+            
+            # O, si el modelo no maneja bien el historial, construimos un prompt único con el contexto
+            # y la pregunta actual, como se hizo para el chat general.
+            # Para este ejemplo, vamos a pasar el historial a `generate_content`
+            # Asegúrate de que el formato del historial sea el esperado por `generate_content`
+            # `contents` (Iterable[glm.Content]): The user's conversational history with the model.
+            # Alternativamente, para un solo turno con contexto:
+            response = gemini_model_chat.generate_content(final_content_for_gemini)
+
+
+            #model_response_text = response.text
+            #current_history.append({"role": "model", "parts": [{"text": model_response_text}]})
+            model_response_text = response.text # Asegúrate que response.text no sea None
+            history_after_user_question = comparison_chat_history_r.get() # Obtener el historial que ya incluye la pregunta del user 
+            current_history = history_after_user_question + [{"role": "model", "parts": [{"text": model_response_text or "No se recibió respuesta del modelo."}]}]     
+            comparison_chat_history_r.set(current_history)
+            print("DEBUG: Gemini response received and history updated.") 
+        except Exception as e:
+            error_msg = f"Error del Chatbot Comparativo: {str(e)}"
+            print(error_msg)
+            #current_history.append({"role": "model", "parts": [{"text": error_msg}]}) # Añadir error al historial
+            #comparison_chat_history_r.set(current_history)
+            history_with_error = comparison_chat_history_r.get() + [{"role": "model", "parts": [{"text": error_msg}]}] # Añadir error al historial
+            comparison_chat_history_r.set(history_with_error)   
+            ui.notification_show(error_msg, type="error", duration=7)
+
+    @output
+    @render.ui
+    def comparison_chat_response_output():
+        history = comparison_chat_history_r.get()
+        if not history:
+            return ui.p("El historial del chat está vacío. Haz una pregunta.")
+        
+        chat_html_elements = []
+        for msg in history:
+            role = msg.get("role")
+            #text = msg.get("parts")[0].get("text") if msg.get("parts") and isinstance(msg.get("parts"), list) and msg.get("parts")[0] else "Contenido no disponible"
+            # Asegurarse de que 'parts' existe, es una lista y tiene al menos un elemento que es un diccionario con 'text'
+            text_part = msg.get("parts")
+            text = "Contenido no disponible"
+            if isinstance(text_part, list) and len(text_part) > 0 and isinstance(text_part[0], dict) and "text" in text_part[0]:
+                text = text_part[0].get("text", "Contenido no disponible")
+
+            if role == "user":
+                chat_html_elements.append(ui.div(ui.markdown(f"**Tú:** {text}"), class_="chat-user-message"))
+            elif role == "model":
+                chat_html_elements.append(ui.div(ui.markdown(text), class_="chat-model-message"))
+            chat_html_elements.append(ui.hr(style="margin-top: 5px; margin-bottom: 5px;"))
+
+        return ui.div(*chat_html_elements)
+
+    # --- Lógica del Chatbot Comparativo Misma Red (NEW) ---
+    @output
+    @render.text # NEW: Separate chat display for same network
+    def active_session_id_for_same_network_comparison_chat_display():
+        # For same network comparison, there's no session_id from the main app flow.
+        # We just indicate it's for the current same-network comparison.
+        return "Contexto del chat: Comparación en la misma red"
+
+    @reactive.Effect
+    @reactive.event(input.ask_same_network_comparison_chat)
+    async def _handle_same_network_comparison_chat():
+        user_prompt = input.same_network_comparison_chat_prompt()
+        logger.info(f"DEBUG: ask_same_network_comparison_chat triggered. User prompt: '{user_prompt}'")
+        current_user = usuario_autenticado.get()
+
+        if not current_user:
+            ui.notification_show("Debes iniciar sesión para usar el chatbot.", type="error", duration=5)
+            return
+        if not user_prompt:
+            ui.notification_show("Por favor, escribe una pregunta.", type="warning", duration=3)
+            logger.info("DEBUG: _handle_same_network_comparison_chat returning - no user_prompt")
+            return
+        if not _ensure_gemini_model():
+        #if not _ensure_gemini_model(gemini_instance=gemini_model_instance, gemini_response=current_gemini_response):
+            ui.notification_show("Modelo Gemini no disponible para el chat comparativo.", type="error", duration=5)
+            logger.info("DEBUG: _handle_same_network_comparison_chat returning - gemini model not ensured")
+            return
+
+        gemini_model_chat = gemini_model_instance.get()
+        logger.info("DEBUG: Gemini model instance for same network chat obtained.")
+        
+        data_for_chat_context = same_network_comparison_data_r.get()
+        context_text_parts = []
+        if data_for_chat_context:
+            for query_label, df_source in data_for_chat_context.items(): # query_label is the key here
+                if isinstance(df_source, pd.DataFrame) and not df_source.empty:
+                    text_col = None
+                    if 'text' in df_source.columns: text_col = 'text'
+                    elif 'comment' in df_source.columns: text_col = 'comment'
+                    elif 'content' in df_source.columns: text_col = 'content'
+                    
+                    if text_col:
+                        sample_texts = df_source[text_col].dropna().astype(str).sample(min(len(df_source), 3), random_state=42 if len(df_source) >=3 else None).tolist() 
+                        if sample_texts:
+                            context_text_parts.append(f"Extractos para '{query_label}':\n" + "\n".join([f"- {s[:150]}..." for s in sample_texts]))
+        
+        full_context_str = "\n\n".join(context_text_parts)
+        if not full_context_str:
+            full_context_str = "No hay datos específicos cargados para esta comparación en la misma red."
+        logger.info(f"DEBUG: Same network chat context string length: {len(full_context_str)}")
+
+        old_history = same_network_comparison_chat_history_r.get()
+        current_history = old_history + [{"role": "user", "parts": [{"text": user_prompt}]}]
+        same_network_comparison_chat_history_r.set(current_history)
+
+        MAX_HISTORY_TURNS = 10 
+        history_for_gemini = current_history.copy()
+        if len(history_for_gemini) > MAX_HISTORY_TURNS * 2:
+            history_for_gemini = history_for_gemini[-(MAX_HISTORY_TURNS * 2):]
+
+        context_message_for_gemini = {"role": "user", "parts": [f"Considera el siguiente contexto de datos de la comparación en la misma red:\n{full_context_str}\n\nAhora, responde a las preguntas del usuario basándote en este contexto y el historial de conversación."]}
+        final_content_for_gemini = [context_message_for_gemini] + history_for_gemini
+
+        ui.notification_show("Procesando pregunta con el chatbot comparativo...", type="info", duration=2)
+        logger.info("DEBUG: Sending request to Gemini for same network comparison chat...")
+        try:
+            response = gemini_model_chat.generate_content(final_content_for_gemini)
+            model_response_text = response.text
+            history_after_user_question = same_network_comparison_chat_history_r.get() 
+            current_history = history_after_user_question + [{"role": "model", "parts": [{"text": model_response_text or "No se recibió respuesta del modelo."}]}]     
+            same_network_comparison_chat_history_r.set(current_history)
+            logger.info("DEBUG: Gemini response received and history updated for same network chat.") 
+        except Exception as e:
+            error_msg = f"Error del Chatbot Comparativo: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            history_with_error = same_network_comparison_chat_history_r.get() + [{"role": "model", "parts": [{"text": error_msg}]}] 
+            same_network_comparison_chat_history_r.set(history_with_error)   
+            ui.notification_show(error_msg, type="error", duration=7)
+
+    @output
+    @render.ui # NEW: Separate chat response output for same network
+    def same_network_comparison_chat_response_output():
+        history = same_network_comparison_chat_history_r.get()
+        if not history: return ui.p("El historial del chat está vacío. Haz una pregunta.")
+        chat_html_elements = []
+        for msg in history:
+            role = msg.get("role")
+            text_part = msg.get("parts")
+            text = "Contenido no disponible"
+            if isinstance(text_part, list) and len(text_part) > 0 and isinstance(text_part[0], dict) and "text" in text_part[0]:
+                text = text_part[0].get("text", "Contenido no disponible")
+
+            if role == "user": chat_html_elements.append(ui.div(ui.markdown(f"**Tú:** {text}"), class_="chat-user-message"))
+            elif role == "model": chat_html_elements.append(ui.div(ui.markdown(text), class_="chat-model-message"))
+            chat_html_elements.append(ui.hr(style="margin-top: 5px; margin-bottom: 5px;"))
+        return ui.div(*chat_html_elements)
+    
+    async def fetch_and_analyze_comparison_data_same_network(platform: str, queries: TypingList[str]) -> Dict[str, pd.DataFrame]:
+        all_queries_data = {}
+        for i, query_text in enumerate(queries):
+            if not query_text.strip():
+                continue # Skip empty queries
+            
+            df_query = pd.DataFrame()
+            query_label = query_text # Use the query text directly as the label for simplicity in plots
+
+            try:
+                if platform == "twitter":
+                    df_query = _get_tweets_from_twitter_api(query_text)
+                    #df_query = _get_tweets_from_twitter_api_demo(query_text)
+                elif platform == "youtube":
+                    df_query = _get_youtube_channels_and_comments(query_text, max_results_comments=10) # Max 10 comments per video
+                elif platform == "maps":
+                    df_query = _maps_comments(query_text)
+                # Add other platforms as needed
+
+                if not df_query.empty and not (('Error' in df_query.columns and len(df_query) == 1) or ('Mensaje' in df_query.columns and len(df_query) == 1)):
+                    text_col = None
+                    if 'text' in df_query.columns: text_col = 'text'
+                    elif 'comment' in df_query.columns: text_col = 'comment'
+                    elif 'content' in df_query.columns: text_col = 'content'
+
+                    if text_col:
+                        df_query['sentiment'] = df_query[text_col].apply(generate_sentiment_analysis)
+                        df_query['emotion'] = df_query[text_col].apply(generate_emotions_analysis)
+                        collapsed_query_text = collapse_text(df_query)
+                        if collapsed_query_text:
+                            topics_list_str = topics_generator(collapsed_query_text)
+                            try:
+                                topics_list = ast.literal_eval(topics_list_str)
+                                if isinstance(topics_list, list) and all(isinstance(t, str) for t in topics_list):
+                                    df_query['topics'] = topics_list[0] if topics_list else "No especificado"
+                                else:
+                                    df_query['topics'] = "Error: Formato de tópicos inesperado"
+                            except (ValueError, SyntaxError):
+                                df_query['topics'] = "Error: Formato de tópicos inválido"
+                        else:
+                            df_query['topics'] = "No hay texto para tópicos"
+                        
+                        all_queries_data[query_label] = df_query
+                    else:
+                        logger.warning(f"No text column found in DataFrame for query '{query_text}' on platform '{platform}'.")
+                else:
+                    logger.warning(f"No data or error for query '{query_text}' on platform '{platform}'.")
+            except Exception as e:
+                logger.error(f"Error fetching and analyzing data for query '{query_text}' on platform '{platform}': {e}", exc_info=True)
+                all_queries_data[query_label] = pd.DataFrame({'Error': [f"Error al obtener/analizar datos para '{query_text}': {e}"]})
+        return all_queries_data
+
+    # --- Lógica para Generador de Infografía (Versión Simplificada en PDF) posteriormente se usará LIDA ---
+    @output
+    @render.ui
+    def infographic_generation_status():
+        return ui.p(infographic_status_r.get())
+
+    @render.download(filename=lambda: f"infografia_comparacion_{active_comparison_session_id.get()[:8] if active_comparison_session_id.get() else 'sesion'}.pdf") # ID del handler coincide con el botón
+    async def generate_infographic_pdf_handler(): # Nombre del handler cambiado para claridad
+        session_id = active_comparison_session_id.get()
+        infographic_title = input.infographic_title() if input.infographic_title() else "Infografía de Comparación"
+
+        if not session_id:
+            infographic_status_r.set("Error: No hay sesión de comparación activa.")
+            yield "Error: No hay sesión de comparación activa."
+            return
+
+        data_dict = comparison_data_r.get()
+        summary_text = comparison_summary_r.get()
+
+        if not data_dict or not summary_text:
+            infographic_status_r.set("Error: No hay datos o resumen de comparación disponibles para generar la infografía.")
+            yield "Error: No hay datos o resumen de comparación disponibles."
+            return
+
+        infographic_status_r.set("Generando PDF de la infografía...")
+        ui.notification_show("Generando PDF...", type="info", duration=10)
+
+        # Crear contenido HTML para el PDF
+        html_parts = [f"<html><head><title>{infographic_title}</title><style>body {{ font-family: sans-serif; margin: 20px; }} h1, h2, h3 {{ color: #333; }} .chart-container {{ margin-top: 20px; margin-bottom: 30px; page-break-inside: avoid; }} img {{ max-width: 100%; height: auto; }}</style></head><body>"]
+        html_parts.append(f"<h1>{infographic_title}</h1>")
+        #html_parts.append(f"<p><i>Sesión ID: {session_id}</i></p>") # type: ignore
+        html_parts.append(f"<p><i>Usuario: {usuario_autenticado.get()}</i></p>")
+        html_parts.append(f"<h2>Resumen Comparativo General</h2><p>{summary_text.replace('\n', '<br>')}</p>")
+
+        # Gráfico de Sentimientos
+
+        try:
+            # Definir categorías y colores si los quieres controlar
+            sentiment_categories_pdf = ['Positivo', 'Neutral', 'Negativo',
+                                        "Error: Análisis de sentimiento (Pysentimiento) fallido",
+                                        "Error: Modelos de sentimiento no disponibles",
+                                        "No especificado"]
+
+            sentiment_dfs_list = []
+            for origin_name, df_item in data_dict.items():
+                if isinstance(df_item, pd.DataFrame) and 'sentiment' in df_item.columns:
+                    temp = df_item[['sentiment']].copy()
+                    temp['origin'] = origin_name # Asegurar que la columna 'origin' existe
+                    sentiment_dfs_list.append(temp)
+            
+            if sentiment_dfs_list:
+                combined_sentiment_df_for_seaborn = pd.concat(sentiment_dfs_list)
+
+                img_bytes_sentiment = generate_seaborn_count_plot_bytes(
+                    data_dict=None, # Pasamos el DF combinado directamente
+                    data_key_for_df=combined_sentiment_df_for_seaborn, # Pasamos el DF combinado
+                    x_column='origin', # Graficar por origen en el eje X
+                    hue_column='sentiment', # Diferenciar por sentimiento
+                    title='Comparación de Sentimientos por Origen (Seaborn)',
+                    category_orders={'sentiment': sentiment_categories_pdf}
+                    # color_palette=sentiment_palette_seaborn
+                )
+                if img_bytes_sentiment:
+                    img_base64_sentiment = base64.b64encode(img_bytes_sentiment).decode()
+                    html_parts.append("<div class='chart-container'><h2>Sentimientos por Origen</h2>")
+                    html_parts.append(f"<img src='data:image/png;base64,{img_base64_sentiment}' alt='Gráfico de Sentimientos (Seaborn)'></div>")
+                else:
+                    html_parts.append("<p><i>No se pudo generar el gráfico de sentimientos con Seaborn.</i></p>")
+            else:
+                 html_parts.append("<p><i>No hay datos de sentimiento para graficar con Seaborn.</i></p>")
+
+        except Exception as e_fig_sent_seaborn:
+            print(f"Error al generar gráfico de sentimiento con Seaborn: {e_fig_sent_seaborn}")
+            html_parts.append("<p><i>Error al generar gráfico de sentimientos (Seaborn) para el PDF.</i></p>")
+
+        html_parts.append("</body></html>")
+        html_content_for_pdf = "".join(html_parts)
+
+        html_parts.append("<h2>Puntos Clave (Texto - Gráficos no incluidos en esta versión beta del PDF)</h2>")
+        for origin, df_source in data_dict.items():
+            if isinstance(df_source, pd.DataFrame) and not df_source.empty:
+                html_parts.append(f"<h3>Fuente: {origin}</h3>")
+                if 'sentiment' in df_source.columns:
+                    sentiment_counts = df_source['sentiment'].value_counts()
+                    html_parts.append(f"<p><b>Sentimientos:</b> {sentiment_counts.to_dict()}</p>")
+                if 'emotion' in df_source.columns:
+                    emotion_counts = df_source['emotion'].value_counts()
+                    html_parts.append(f"<p><b>Emociones:</b> {emotion_counts.to_dict()}</p>")
+                if 'topics' in df_source.columns:
+                    topic_counts = df_source['topics'].value_counts().nlargest(5)
+                    html_parts.append(f"<p><b>Tópicos Principales:</b> {topic_counts.to_dict()}</p>")
+
+        html_parts.append("</body></html>")
+        html_content_for_pdf = "".join(html_parts)
+
+        try:
+            # from weasyprint import HTML
+            # pdf_bytes = HTML(string=html_content_for_pdf).write_pdf()
+            # infographic_status_r.set("Infografía PDF generada con WeasyPrint. La descarga debería comenzar.")
+            # yield pdf_bytes
+            from xhtml2pdf import pisa
+            pdf_buffer = io.BytesIO()
+            # Asegúrate de que html_content_for_pdf sea una cadena codificada en UTF-8 para pisa
+            html_content_for_pdf_encoded = html_content_for_pdf.encode("UTF-8")
+            src_file_like = io.BytesIO(html_content_for_pdf_encoded)
+
+            pisa_status = pisa.CreatePDF(
+                src_file_like,  # un objeto BytesIO del contenido HTML
+                dest=pdf_buffer # un objeto BytesIO para almacenar el PDF
+            )
+            src_file_like.close()
+
+            if pisa_status.err:
+                error_msg_pdf = f"Error al generar el PDF con xhtml2pdf: {pisa_status.err}"
+                print(error_msg_pdf)
+                infographic_status_r.set(error_msg_pdf)
+                yield error_msg_pdf.encode('utf-8') # El download handler espera bytes
+                return
+
+            pdf_bytes = pdf_buffer.getvalue()
+            pdf_buffer.close()
+            infographic_status_r.set("Infografía PDF generada con xhtml2pdf. La descarga debería comenzar.")
+            yield pdf_bytes
+        except ImportError: # Específicamente para xhtml2pdf no encontrado
+            error_msg_pdf = "La librería 'xhtml2pdf' no está instalada. Por favor, instálala con 'pip install xhtml2pdf'."
+            print(error_msg_pdf)
+            infographic_status_r.set(error_msg_pdf)
+            yield error_msg_pdf.encode('utf-8')
+        except Exception as e_pdf: # Captura otras excepciones durante la generación del PDF
+            error_msg_pdf = f"Error al generar el PDF de la infografía con xhtml2pdf: {e_pdf}."
+            print(error_msg_pdf)
+            infographic_status_r.set(error_msg_pdf)
+            yield error_msg_pdf.encode('utf-8')
+
+    # --- Fin Lógica del Módulo de Comparación ---
+
+    @render.download(filename='tabla_scraper_parser.csv')
+    async def download_scraper_parser_table():
+        results = scraper_parser_results.get()
+        df_to_download = None
+
+        if results:
+            merged_table_df = results.get("merged_table")
+            extracted_tables_list = results.get("extracted_tables", [])
+
+            # Prioridad 1: Tabla fusionada
+            if isinstance(merged_table_df, pd.DataFrame) and not merged_table_df.empty and not ('Error' in merged_table_df.columns or 'Mensaje' in merged_table_df.columns):
+                df_to_download = merged_table_df
+            # Prioridad 2: Primera tabla extraída válida
+            elif extracted_tables_list:
+                for table_df in extracted_tables_list:
+                    if isinstance(table_df, pd.DataFrame) and not table_df.empty and not ('Error' in table_df.columns or 'Mensaje' in table_df.columns):
+                        df_to_download = table_df
+                        break 
+        
+        if df_to_download is not None:
+            try:
+                yield df_to_download.to_csv(index=False, encoding='utf-8-sig')
+            except Exception as e:
+                print(f"Error al generar CSV para descarga: {e}")
+                yield f"Error al generar CSV: {e}"
+        else:
+            yield "No hay tabla válida para descargar."
+
+    @render.download(filename='tabla_scraper_parser.xlsx')
+    async def download_scraper_parser_table_excel():
+        results = scraper_parser_results.get()
+        df_to_download = None
+
+        if results:
+            merged_table_df = results.get("merged_table")
+            extracted_tables_list = results.get("extracted_tables", [])
+
+            if isinstance(merged_table_df, pd.DataFrame) and not merged_table_df.empty and not ('Error' in merged_table_df.columns or 'Mensaje' in merged_table_df.columns):
+                df_to_download = merged_table_df
+            elif extracted_tables_list:
+                for table_df in extracted_tables_list:
+                    if isinstance(table_df, pd.DataFrame) and not table_df.empty and not ('Error' in table_df.columns or 'Mensaje' in table_df.columns):
+                        df_to_download = table_df
+                        break 
+        
+        if df_to_download is not None:
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_to_download.to_excel(writer, index=False, sheet_name='Datos')
+            yield output.getvalue()
+        else:
+            yield "No hay tabla válida para descargar en formato Excel."
+
 
 app = App(app_ui, server)
 
