@@ -19,3 +19,5 @@ test/
 *.exe
 *.chromedriver
 .idea/
+*.xls
+*.xlsx
