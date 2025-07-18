@@ -430,24 +430,6 @@ def server(input, output, session):
             mensaje_login.set("Por favor, ingrese su correo electrónico.")
             return
         
-        """
-        try:
-            nombre_usuario, dominio = email.strip().lower().split('@')
-            if dominio in DOMINIOS_PERMITIDOS:
-                usuario_autenticado.set(nombre_usuario) # Guardamos solo la parte antes del @
-                mensaje_login.set("")
-                ui.notification_show(f"¡Bienvenido, {nombre_usuario}!", type="message", duration=5)
-            else:
-                mensaje_login.set("Dominio de correo no autorizado.")
-                usuario_autenticado.set(None)
-                
-        except ValueError:
-            mensaje_login.set("Formato de correo electrónico inválido.")
-            usuario_autenticado.set(None)
-        except Exception as e:
-            mensaje_login.set(f"Error inesperado durante el login: {e}")
-            usuario_autenticado.set(None)
-        """
         if not password_str:
             mensaje_login.set("Por favor, ingrese su contraseña.")
             return
@@ -721,19 +703,6 @@ def server(input, output, session):
             "Módulo de Comparación misma red",
             ui.navset_card_pill(
                 ui.nav_panel("Análisis General Comparativo",
-                   
-                    #ui.markdown("### Comparación de Datos por Sesión"),
-                    #ui.output_text("active_session_id_for_comparison_display"),
-                    #ui.input_select("comparison_platform_selector", "Seleccionar Plataforma:",
-                    #    {"twitter": "Twitter (X)", "youtube": "YouTube", "maps": "Google Maps", "reddit": "Reddit",
-                    #    "facebook": "Facebook (Próximamente)", "tiktok": "TikTok (Próximamente)"}),
-                    #ui.input_text("comparison_query_1", "Marca/Tópico 1:", placeholder="Ej: 'iPhone 15' o '#ElonMusk'"),
-                    #ui.input_text("comparison_query_2", "Marca/Tópico 2:", placeholder="Ej: 'Samsung S24' o '#Tesla'"),
-                    #ui.input_text("comparison_query_3", "Marca/Tópico 3 (Opcional):", placeholder="Ej: 'Google Pixel'"),
-                    #ui.input_text("comparison_query_4", "Marca/Tópico 4 (Opcional):", placeholder="Ej: 'OnePlus'"),
-                    #ui.input_text("comparison_query_5", "Marca/Tópico 5 (Opcional):", placeholder="Ej: 'Xiaomi'"),
-                    #ui.hr(),
-                
                     ui.output_ui("same_network_comparison_summary_output"), # NEW: Output for same-network summary
                     ui.input_action_button("execute_same_network_comparison", "Generar Comparación", class_="btn-info mt-2 mb-3"),
                     ui.hr(),
@@ -812,20 +781,6 @@ def server(input, output, session):
     def app_logo():
         image_path = Path(__file__).parent / "www"/"LogoNuevo.png"
         return {"src": str(image_path), "alt": "App Logo"}
-    #def _load_emotion_model():
-    #    model_path = "daveni/twitter-xlm-roberta-emotion-es"
-    #    try:
-    #        tokenizer = AutoTokenizer.from_pretrained(model_path)
-    #        config = AutoConfig.from_pretrained(model_path)
-    #        model = AutoModelForSequenceClassification.from_pretrained(model_path)
-    #        emotion_tokenizer.set(tokenizer)
-    #        emotion_config.set(config)
-    #        emotion_model.set(model)     
-    #        return True 
-    #    except Exception as e:
-    #        print(f"Error al cargar el modelo de emociones: {e}")
-    #        return False
-    
 
     ## Para Gemini
     def _ensure_gemini_embeddings_model():
@@ -883,24 +838,6 @@ def server(input, output, session):
                 return False
         return True 
     
-    # ---- Supabase ensure
-    #def _ensure_supabase_client():
-    #    if supabase_client_instance.get() is None:
-    #        if not SUPABASE_URL or not SUPABASE_KEY:
-    #            print("Error: Supabase URL o Key no configuradas.")
-    #            ui.notification_show("Supabase no configurado. No se guardarán los datos.", type="error", duration=7)
-    #            return False
-    #        try:
-    #            print("Iniciando cliente de Supabase...")
-    #            client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    #            supabase_client_instance.set(client)
-    #            print("Cliente de Supabase inicializado.")
-    #            return True
-    #        except Exception as e:
-    #            print(f"Error al inicializar el cliente de Supabase: {e}")
-    #            ui.notification_show(f"Error al conectar con Supabase: {e}", type="error", duration=7)
-    #            return False
-    #    return True
     
     # ----- Supabase ensure psql
     def _ensure_psycopg2_connection():
@@ -979,104 +916,6 @@ def server(input, output, session):
         except Exception as e:
             print(f"Error processing text because empty row '{text[:50]}...': {e}. Returning 'No Aplica'.")
             return "No Aplica" 
-
-
-    ### Insertamos las funciones generales que se usarán en toda la app 
-    def generate_sentiment_analysis2(text):
-        text = str(text)
-        #if not _ensure_spacy_sentiment_model():
-        #    return "Error: Modelo de sentimiento no disponible"
-        #nlp_model = spacy_nlp_sentiment.get()
-        #if nlp_model is None: 
-        #    return "Error interno modelo de sentimiento"
-        ##doc = nlp_sentiment(text)
-        #doc = nlp_model(text)
-        #polarity = doc._.blob.polarity  
-        #sentiment='Neutral'
-        #if polarity > 0.1:
-        #    sentiment = 'Positivo'
-        #elif polarity < -0.1:
-        #    sentiment = 'Negativo'
-        #return sentiment
-        use_spacy = _ensure_spacy_sentiment_model()
-        nlp_model = spacy_nlp_sentiment.get() if use_spacy else None
-
-        if nlp_model:
-            doc = nlp_model(text)
-            polarity_spacy = doc._.blob.polarity
-
-            if polarity_spacy > 0.1:
-                return 'Positivo'  
-            elif polarity_spacy < -0.1:
-                return 'Negativo' 
-            else:
-                # Si Spacy es neutral, usa otro método
-                sentiment_spacy_neutral = 'Neutral'
-                #print(f"SpacyTextBlob polarity ({polarity_spacy:.3f}) is neutral/weak. Consulting Pysentimiento for: '{text[:60]}...'")
-
-                use_pysentimiento = _ensure_pysentimiento_analyzer()
-                analyzer_pysent = pysentimiento_analyzer_instance.get() if use_pysentimiento else None
-
-                if analyzer_pysent:
-                    try:
-                        result_pysentimiento = analyzer_pysent.predict(text)
-                        pysent_sentiment_map = {"POS": "Positivo", "NEG": "Negativo", "NEU": "Neutral"}
-                        sentiment_pysent = pysent_sentiment_map.get(result_pysentimiento.output, "Neutral")
-
-                        if sentiment_pysent != "Neutral":
-                            #print(f"Pysentimiento valores: {sentiment_pysent} (Probas: {result_pysentimiento.probas})")
-                            return sentiment_pysent
-                        else:
-                            #print(f"Pysentimiento también dice que es neutral: {result_pysentimiento.probas}")
-                            return sentiment_spacy_neutral
-                    except Exception as e:
-                        print(f"Error en pysentimiento: {e}. Tomando el valor de Spacy ({sentiment_spacy_neutral}).")
-                        return sentiment_spacy_neutral
-                else: 
-                    print("Pysentimiento no disponible. Se queda valor neutro")
-                    return sentiment_spacy_neutral
-        else:
-            print("Spacy falló, usar Pysentimiento.")
-            use_pysentimiento = _ensure_pysentimiento_analyzer()
-            analyzer_pysent = pysentimiento_analyzer_instance.get() if use_pysentimiento else None
-
-            if analyzer_pysent:
-                try:
-                    result = analyzer_pysent.predict(text)
-                    pysent_sentiment_map = {"POS": "Positivo", "NEG": "Negativo", "NEU": "Neutral"}
-                    return pysent_sentiment_map.get(result.output, "Neutral")
-                except Exception as e:
-                    print(f"Error en pysentimiento: {e}")
-                    return "Error: Análisis de sentimiento (Pysentimiento) fallido"
-            else: # Both Spacy and Pysentimiento are unavailable
-                return "Error: Modelos de sentimiento no disponibles"        
-
-
-    def generate_emotions_analysis2(text):
-        text = str(text)
-        if not _ensure_pysentimient_emotions_analyzer():
-            return "Error: Modelo de emociones no disponible"
-        analyzer = pysentimiento_emotions_analyzer_instance.get()
-        if analyzer is None:
-            return "Error interno modelo de emociones"
-        emotion_map_es = {
-            "joy": "Alegría", 
-            "sadness": "Tristeza", 
-            "anger": "Enojo", 
-            "fear": "Miedo", 
-            "surprise": "Sorpresa", 
-            "disgust": "Asco", 
-            "neutral": "Neutral"
-        }    
-        try:
-            result = analyzer.predict(text)
-            primary_emotion_en = result.output
-            if primary_emotion_en=="others":
-                primary_emotion_en="neutral"
-            return emotion_map_es.get(primary_emotion_en, "Desconocida")
-        except Exception as e:
-            print(f"Error en el análisis de emociones {e}")
-            return "Error: Análisis de emociones fallido"
 
 
 
@@ -1505,65 +1344,6 @@ def server(input, output, session):
         translatedText = GoogleTranslator(source = source, target = target).translate(text)
         return translatedText    
     
-    """
-    def save_df_to_supabase(df: pd.DataFrame, platform_name: str, requested_by: str):
-        if not _ensure_supabase_client():
-            # La notificación ya se muestra en _ensure_supabase_client si falla
-            return
-
-        sb_client = supabase_client_instance.get()
-        
-        table_name_map = {
-            "wikipedia": "wikipedia_data",
-            "youtube": "youtube_comments_data",
-            "maps": "maps_reviews_data",
-            "twitter": "twitter_posts_data",
-            "generic_webpage": "generic_webpage_data",
-            "reddit": "reddit_comments_data",
-            "playstore": "playstore_reviews_data",
-            "llm_web_parser": "llm_web_parser_data" # Añadido para el parser LLM
-        }
-        table_name = table_name_map.get(platform_name)
-
-        if not table_name:
-            ui.notification_show(f"Error: No hay tabla de Supabase definida para la plataforma '{platform_name}'. Los datos no se guardaron.", type="error", duration=7)
-            print(f"Error: No Supabase table defined for platform '{platform_name}'.")
-            return
-
-        if df.empty or ('Error' in df.columns and len(df) == 1) or ('Mensaje' in df.columns and len(df) == 1):
-            print(f"DataFrame para {platform_name} está vacío o es un error/mensaje. No se guarda en Supabase.")
-            return
-
-        df_copy = df.copy()
-        df_copy["request_timestamp"] = datetime.now(timezone.utc).isoformat()
-        df_copy["requested_by_user"] = requested_by
-
-        # Convertir tipos de datos problemáticos para JSON/Supabase
-        for col in df_copy.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]']).columns:
-            df_copy[col] = df_copy[col].apply(lambda x: x.isoformat() if pd.notnull(x) else None)
-        df_copy = df_copy.replace({pd.NaT: None, np.nan: None}) # Convertir NaT y NaN a None
-
-        records_to_insert = df_copy.to_dict(orient='records')
-
-        try:
-            #response = sb_client.table(table_name).schema("iris_scraper").insert(records_to_insert).execute()
-            response = sb_client.table(table_name).insert(records_to_insert).select("*").execute()
-
-            # La respuesta de insert de Supabase-py V2 es APIResponse, accedemos a .data
-            if response.data: # Si hay datos, la inserción fue (probablemente) exitosa
-                ui.notification_show(f"{len(response.data)} registros guardados en Supabase (tabla: '{table_name}', esquema: 'iris_scraper').", type="message", duration=5)
-                print(f"Se guardaron exitosamente {len(response.data)} registros en la tabla '{table_name}' de Supabase.")
-            # Considerar cómo Supabase-py v2 maneja errores que no son excepciones
-            # Por ejemplo, si response.error existe.
-            elif hasattr(response, 'error') and response.error:
-                 ui.notification_show(f"Error al guardar en Supabase tabla '{table_name}': {response.error.message}", type="error", duration=7)
-                 print(f"Error al guardar en Supabase tabla '{table_name}': {response.error}")
-        except Exception as e:
-            ui.notification_show(f"Error al guardar en Supabase tabla '{table_name}': {str(e)}", type="error", duration=7)
-            print(f"Error al guardar en Supabase tabla '{table_name}': {e}")
-            import traceback
-            traceback.print_exc()    
-    """
     def save_df_to_postgres_with_psycopg2(df: pd.DataFrame, platform_name: str, requested_by: str, input_reference_value: str = None, session_id_value: str = None):
         if not _ensure_psycopg2_connection():
             return
@@ -1643,7 +1423,6 @@ def server(input, output, session):
         cursor = None
         try:
             cursor = conn.cursor()
-
             # Generate and execute CREATE TABLE IF NOT EXISTS
             #create_table_sql_stmt = get_create_table_sql(df_copy, qualified_table_name)
             #create_table_sql_stmt = get_create_table_sql(df_copy.drop(columns=["input_reference_internal_use"], errors='ignore'), qualified_table_name, has_input_reference_col=(input_reference_value is not None))
@@ -1913,21 +1692,6 @@ def server(input, output, session):
     @output
     @render.data_frame
     def df_data():
-        #platform = input.platform_selector()
-        #if platform == "wikipedia":
-        #    df= process_wikipedia_for_df()
-        #elif platform == "youtube":
-        #    df= get_youtube_comments()
-        #elif platform == "maps":
-        #    df= mapsComments()
-        #elif platform =='twitter':
-        #    df= getTweetsResponses()
-        #else: 
-        #    df= pd.DataFrame()
-        #if isinstance(df, pd.DataFrame):
-        #    return render.DataGrid(df, height= 350)
-        #else: 
-        #    return render.DataGrid(pd.DataFrame({"Error": ["Datos no disponibles"]}), height=350)
         df = processed_dataframe.get()
         if isinstance(df, pd.DataFrame) and not df.empty:
             if 'Error' in df.columns and len(df) == 1:
@@ -2281,45 +2045,6 @@ def server(input, output, session):
             print(f"TweepyException: {error_message}")
             return pd.DataFrame({"Error": [f"Error de API de Twitter: {error_message}"]})
         ### Excepciones basadas en la API
-        ### Exexpciones no basadas en la API
-
-        #if "x.com/" in twitter_input and "/status/" in twitter_input:
-        #    #match = re.search(r'/status/(\d+)/', twitter_input)
-        #    match = re.match(r'.*/status/(\d+)', twitter_input)
-        #    if match:
-        #        tweet_id = match.group(1)
-        #    else:
-        #        return pd.DataFrame({'Error': ["No se pudo extraer el ID del tweet."]})
-        #elif twitter_input.isdigit():
-        #    tweet_id = twitter_input
-        #else: 
-        #    return pd.DataFrame({'Error': ["URL de Twitter no válida."]}) 
-        #     
-        #try: 
-        #    listTweets = client.search_recent_tweets(
-        #        query=f"conversation_id:{tweet_id}",
-        #        expansions=["author_id"],  
-        #        user_fields=["username"],  
-        #        max_results=10
-        #    )
-        #
-        #    tweets = listTweets.data
-        #    users = {u["id"]: u for u in listTweets.includes['users']}
-        #    tweets_list = []
-        #    for tweet in tweets:
-        #        tweet_info = {
-        #            'tweet_id': tweet.id,
-        #            'text': tweet.text,
-        #            'author_id': tweet.author_id,
-        #            'username': users[tweet.author_id]["username"] if tweet.author_id in users else None,
-        #            'created_at': tweet.created_at if hasattr(tweet, 'created_at') else None
-        #        }
-        #        tweets_list.append(tweet_info)
-        #    df = pd.DataFrame(tweets_list)
-        #    df['sentiment'] = df['text'].apply(generate_sentiment_analysis)
-        #    #df['emotion'] = df['text'].apply(lambda x: detectEmotion(x)[0])
-        #    #return pd.DataFrame(df)
-        #    return df 
         except Exception as e:
             #return pd.DataFrame({"Error": [f"Error al obtener comentarios: {str(e)}"]})
             print(f"Error general en la función getTweetsResponses: {str(e)}")
@@ -2413,9 +2138,6 @@ def server(input, output, session):
                 df['origin'] = "youtube"
                 df['topics'] = df['comment'].apply(classify_call)
 
-            #df['sentiment'] = df['comment'].apply(generate_sentiment_analysis)
-            #df['emotion'] = df['comment'].apply(generate_emotions_analysis)
-            #df['emotion'] = df['comment'].apply(lambda x: detectEmotion(x)[0])
             return df
         except Exception as e:
             return pd.DataFrame({"Error": [f"Error al obtener comentarios: {str(e)}"]})
@@ -2947,8 +2669,7 @@ def server(input, output, session):
             color_palette (dict or list, optional): Paleta de colores para Seaborn.
         """
         
-        # 1. Preparar los datos: Combinar DataFrames de data_dict si es necesario
-        # Esta es una forma simple de combinar; ajusta según tus necesidades.
+        # 1. Preparar los datos: Combinar DataFrames de data_dict si es necesa
         """
         all_dfs = []
         for origin, df_source in data_dict.items():
