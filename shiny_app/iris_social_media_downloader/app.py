@@ -139,7 +139,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from shinywidgets import output_widget, render_widget, render_plotly # xui import removed
+from shinywidgets import output_widget, render_widget, render_plotly 
 from plotly.subplots import make_subplots
 from PIL import Image 
 from pyvis.network import Network
@@ -169,11 +169,8 @@ import googlemaps
 import tweepy
 from googleapiclient.discovery import build ## Youtube
 
-#### Librerías para análisis de textos 
+### Librería de análisis de texto
 import spacy
-from spacytextblob.spacytextblob import SpacyTextBlob
-from pysentimiento import create_analyzer
-
 
 #### Librerías para llamar a modelos de HuggingFace
 from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
@@ -220,9 +217,11 @@ import time
 
 ### LLamando a los scripts de ayuda// Calling helper scripts
 from config import * ### Script con secretos y también ligas a Chrome Driver etc 
+from utils import *
 from scrapers.webpage_scrapers import _maps_comments, _get_youtube_channels_and_comments, _get_tweets_from_twitter_api
-from large_and_small_models.gemini_model_and_functions import _ensure_gemini_model, topics_generator, current_gemini_response, gemini_embeddings_model, gemini_model_instance
-
+#from large_and_small_models.gemini_model_and_functions import _ensure_gemini_model, topics_generator, current_gemini_response, gemini_embeddings_model, gemini_model_instance
+from sentiments_and_emotions_classifier.emotions_and_sentiments import  spacy_nlp_sentiment, pysentimiento_analyzer_instance, pysentimiento_emotions_analyzer_instance, summarizer_pipeline_instance, emotion_model, emotion_tokenizer, emotion_config
+from sentiments_and_emotions_classifier.emotions_and_sentiments import _ensure_spacy_sentiment_model,  _ensure_pysentimiento_analyzer, _ensure_pysentimient_emotions_analyzer,  generate_emotions_analysis, sentiment_based_on_emotions_analysis, generate_sentiment_analysis
 
 ################## Mensajes generales y funciones de ayuda ###########
 random.seed(42)  
@@ -230,54 +229,6 @@ random.seed(42)
 print(f"PostgreSQL Host configured: {'Yes' if PG_HOST else 'No'}")
 print(f"PostgreSQL User configured: {'Yes' if PG_USER else 'No'}")
 
-
-
-
-# --- Helper functions for dynamic table creation ---
-def pandas_dtype_to_pg(dtype):
-    """Converts a pandas dtype to a PostgreSQL data type string."""
-    if pd.api.types.is_integer_dtype(dtype):
-        return "BIGINT"
-    elif pd.api.types.is_float_dtype(dtype):
-        return "DOUBLE PRECISION"
-    elif pd.api.types.is_bool_dtype(dtype):
-        return "BOOLEAN"
-    elif pd.api.types.is_datetime64_any_dtype(dtype):
-        return "TIMESTAMP WITHOUT TIME ZONE"
-    elif pd.api.types.is_string_dtype(dtype) or pd.api.types.is_object_dtype(dtype):
-        return "TEXT"
-    else:
-        return "TEXT" 
-
-def get_create_table_sql(df_for_schema, qualified_table_name, has_input_reference_col, has_session_id_col):
-    """Generates a CREATE TABLE IF NOT EXISTS SQL statement from a DataFrame."""
-    columns_defs = []
-    ## Añadiendo el UUID
-    columns_defs.append("id UUID PRIMARY KEY DEFAULT gen_random_uuid()")
-
-    if has_input_reference_col:
-        columns_defs.append("input_reference TEXT")
-
-    if has_session_id_col:
-        columns_defs.append("session_id TEXT")
-    
-
-    for col_name, dtype in df_for_schema.dtypes.items():
-        pg_type = pandas_dtype_to_pg(dtype)
-        columns_defs.append(f'"{col_name}" {pg_type}') # Quote column names
-    
-    columns_sql = ",\n    ".join(columns_defs)
-    create_sql = f"""CREATE TABLE IF NOT EXISTS {qualified_table_name} (
-    {columns_sql}
-);"""
-    return create_sql
-
-
-
-    
-
-
-        
 
 # --- End Helper functions ---
 
@@ -322,143 +273,6 @@ app_ui = ui.page_fixed(
 
         """)
     ),
-    #ui.tags.link(rel="stylesheet", href="styles.css"),
-    #### """ui antiguo"""
-    # ui.layout_sidebar(
-    #     ui.sidebar(
-    #         #ui.img(src="LogoNuevo.png", style="height: 40px; width: auto; display: block; margin-left: auto; margin-right: auto; margin-bottom: 10px;"),
-    #         #ui.output_image("app_logo", width='100px', height='50px'),
-    #         #ui.img(src="LogoNuevo.png", height='100px', class_="center-block"),
-    #         #ui.img(src="./www/LogoNuevo.png", height='100px', class_="center-block"),
-    #         #ui.img(src="E:/Users/1167486/Local/scripts/Social_media_comments/shiny_app/iris_social_media_downloader/www/LogoNuevo.png", height='100px', class_="center-block"),            
-    #         ui.markdown("**Social Media Downloader** - Extrae y analiza datos de diferentes plataformas."),
-    #         ui.hr(),
-    #         # Selector de plataforma
-    #         ui.input_select(
-    #             "platform_selector",
-    #             "Seleccionar Plataforma:",
-    #             {
-    #                 "wikipedia": "Wikipedia",
-    #                 "playstore": "Google Play Store",
-    #                 "youtube": "YouTube",
-    #                 "maps": "Google Maps",
-    #                 "reddit": "Reddit", 
-    #                 "twitter": "Twitter (X)",
-    #                 "generic_webpage": "Página web Genérica",
-    #                 "facebook": "Facebook (Próximamente)",
-    #                 "instagram": "Instagram (Próximamente)",
-    #                 "amazon_reviews": "Amazon Reviews (Próximamente)"
-    #             }
-    #         ),
-            
-    #         # Inputs dinámicos según plataforma seleccionada
-    #         ui.output_ui("platform_inputs"),
-            
-    #         #ui.input_action_button("execute", "Ejecutar", class_="btn-primary"),
-    #         ui.input_action_button("execute", " Scrapear!!", icon=ui.tags.i(class_="fas fa-play"), class_="btn-primary"),
-    #         width=350
-    #     ),
-        
-    #     ui.navset_card_tab(
-    #         ui.nav_panel(
-    #             " Base de datos",
-    #             ui.output_data_frame('df_data'),
-    #             #ui.download_button("download_data", "Descargar CSV", class_="btn-info btn-sm mb-2")
-    #             ui.download_button("download_data", "Descargar CSV", icon=ui.tags.i(class_="fas fa-download"), class_="btn-info btn-sm mb-2 mt-2"),
-    #             icon=ui.tags.i(class_="fas fa-table-list")                
-    #             #ui.output_ui("dynamic_content")
-    #             #ui.output_ui('platform_inputs')
-    #         ),
-    #         ui.nav_panel(
-    #             " Resumen",
-    #             #ui.output_text("summary_output"),
-    #             ui.output_ui('styled_summary_output'),
-    #             icon=ui.tags.i(class_="fas fa-file-lines")
-
-    #         ),
-    #         ui.nav_panel(
-    #             " Análisis de Sentimiento",
-    #             #output_widget("sentiment_output"),
-    #             ui.output_plot("sentiment_output"),
-    #             ui.download_button("download_sentiment_plot", "Descargar Gráfico (PNG)", icon=ui.tags.i(class_="fas fa-image"), class_="btn-success btn-sm mt-2"),                
-    #             #ui.output_ui('styled_summary_output'),
-    #             #icon=ui.tags.i(class_="fa-solid fa-chart-simple")
-    #             #icon=ui.tags.i(class_="fa-solid fa-face-smile"),
-    #             #icon=ui.tags.i(class_="fa-solid fa-face-frown")
-    #             icon=ui.tags.i(class_="fa-solid fa-magnifying-glass-chart")
-    #         ),
-    #         ui.nav_panel(
-    #             " Análisis de Emociones",
-    #             ui.output_plot("emotion_plot_output"),
-    #             ui.download_button("download_emotion_plot", "Descargar Gráfico de Emociones (PNG)", icon=ui.tags.i(class_="fas fa-image"), class_="btn-success btn-sm mt-2"),
-    #             #icon=ui.tags.i(class_="fa-solid fa-face-grin-beam"), 
-    #             #icon=ui.tags.i(class_="fa-solid fa-face-sad-cry"),
-    #             #icon=ui.tags.i(class_="fa-solid fa-face-angry")
-    #             icon=ui.tags.i(class_="fa-solid fa-icons")
-    #         ),
-    #         ui.nav_panel(
-    #             "Map (Solo con Google Maps Selector)",
-    #             ui.output_ui("google_map_embed"),
-    #             icon = ui.tags.i(class_="fas fa-map-marked-alt")
-    #         ),
-    #         ui.nav_panel(
-    #             "Análisis de tópicos",
-    #             ui.output_plot("topics_plot_output"),
-    #             ui.download_button("download_topics_plot", "Descargar Gráfico de Tópicos (PNG)", icon=ui.tags.i(class_="fas fa-image"), class_="btn-success btn-sm mt-2"),
-    #             icon = ui.tags.i(class_="fa-solid fa-chart-bar")
-    #         ),
-    #         ui.nav_panel(
-    #             " Chat con Gemini",
-    #             ui.layout_sidebar(
-    #                 ui.sidebar(
-    #                     ui.input_text_area("gemini_prompt", "Tu pregunta:", 
-    #                                      placeholder="Escribe tu pregunta para Gemini aquí..."),
-    #                     #ui.input_action_button("ask_gemini", "Preguntar", class_="btn-success"),
-    #                     ui.input_action_button("ask_gemini", "Preguntar", icon=ui.tags.i(class_="fas fa-paper-plane"),
-    #                                             class_="btn-success"),
-    #                     width=350
-    #                 ),
-    #                 ui.card(
-    #                     ui.card_header("Respuesta de Gemini"),
-    #                     ui.output_text("gemini_response"),
-    #                     height="400px",
-    #                     style="overflow-y: auto;"
-    #                 )
-    #             ),
-    #             icon=ui.tags.i(class_="fa-solid fa-robot")
-    #         ),
-    #         ui.nav_panel(
-    #             " Mapa Mental", 
-    #             ui.output_ui("mind_map_output"),
-    #             icon=ui.tags.i(class_="fas fa-project-diagram")
-    #         ),   
-    #         ui.nav_panel(
-    #             #" Web Scraper/Parser",
-    #             " Scrapear Tablas con chatbot",
-
-    #             ui.layout_sidebar(
-    #                 ui.sidebar(
-    #                     ui.input_text_area("scraper_urls", "URLs a Scrapear (una sola): \n No admite redes sociales, solo páginas web", 
-    #                                      placeholder="https://ejemplo.com/pagina", value ="https://www.elektra.mx/italika",  height=150),
-    #                     ui.input_text_area("parser_description", "Describe qué información quieres extraer:", 
-    #                                      placeholder="Ej: 'Tabla de precios de productos'", height=100, value = 'Genera una tabla con los precios de las motos de mayor a menor precio'),
-    #                     ui.input_action_button("execute_scraper_parser", "Scrapear y Parsear", 
-    #                                            icon=ui.tags.i(class_="fas fa-play"), class_="btn-primary"),
-    #                     width=350
-    #                 ),
-    #                 ui.card(
-    #                     ui.card_header("Resultados del Scraper y Parser"),
-    #                     #ui.p("Para este caso, no se necesita seleccionar una plataforma del menú de la izquierda."),
-    #                     # This output will dynamically show tables or raw text
-    #                     ui.output_ui("scraper_parser_output"),
-    #                     #height="600px", # Adjust height as needed
-    #                     style="overflow-y: auto;"
-    #                 )
-    #             ),
-    #             icon = ui.tags.i(class_="fa-solid fa-comments")
-    #         )            
-    #     )
-    # ),
     #### """ui antiguo"""
     ui.output_ui("ui_app_dinamica"),
     #theme=shinyswatch.theme.darkly()
@@ -478,16 +292,10 @@ def server(input, output, session):
     pinecone_client = reactive.Value(None)
     pinecone_index_instance = reactive.Value(None)
     processed_dataframe = reactive.Value(pd.DataFrame())
-    #current_gemini_response = reactive.Value("Carga datos y luego haz una pregunta sobre ellos, o haz una pregunta general. Presiona Enter o el botón verde a la izquierda para activar el bot")
-    #gemini_embeddings_model = reactive.Value(None)
-    #gemini_model_instance= reactive.Value(None)
-    spacy_nlp_sentiment = reactive.Value(None)
-    pysentimiento_analyzer_instance = reactive.Value(None)
-    pysentimiento_emotions_analyzer_instance = reactive.Value(None)    
-    summarizer_pipeline_instance = reactive.Value(None)
-    emotion_model = reactive.Value(None)
-    emotion_tokenizer = reactive.Value(None)
-    emotion_config = reactive.Value(None)
+    current_gemini_response = reactive.Value("Carga datos y luego haz una pregunta sobre ellos, o haz una pregunta general. Presiona Enter o el botón verde a la izquierda para activar el bot")
+    gemini_embeddings_model = reactive.Value(None)
+    gemini_model_instance= reactive.Value(None)
+
     scraper_parser_results = reactive.Value(None)
     llm_model_instance = reactive.Value(None)
     topic_pipeline_instance =  reactive.Value(None)
@@ -1018,47 +826,6 @@ def server(input, output, session):
     #        print(f"Error al cargar el modelo de emociones: {e}")
     #        return False
     
-    def _ensure_spacy_sentiment_model():
-        if spacy_nlp_sentiment.get() is None:
-            try:
-                print('Iniciando el modelo de Spacy')
-                nlp = spacy.load('es_core_news_md')
-                if not nlp.has_pipe('spacytextblob'):
-                    nlp.add_pipe('spacytextblob')
-                spacy_nlp_sentiment.set(nlp)
-                print('Modelo Spacy cargado')
-                return True
-            except Exception as e:
-                print(f"Error al cargar el modelo de Spacy")
-                return False 
-        return True
-    
-    def _ensure_pysentimiento_analyzer():
-        if pysentimiento_analyzer_instance.get() is None:
-            try:
-                print('Iniciando el modelo pysentimiento para sentimientos (valga la redundancia)')
-                analyzer = create_analyzer(task="sentiment", lang="es")
-                pysentimiento_analyzer_instance.set(analyzer)
-                print('Modelo pysentimiento para sentimientos cargado')
-                return True
-            except Exception as e:
-                print(f"Error al cargar el modelo de pysentimiento para sentimientos {e}")
-                return False
-        return True
-
-    def _ensure_pysentimient_emotions_analyzer():
-        if pysentimiento_emotions_analyzer_instance.get() is None:
-            try:
-                print('Iniciando el modelo pysentimiento para emociones')
-                analyzer = create_analyzer(task="emotion", lang="es")
-                pysentimiento_emotions_analyzer_instance.set(analyzer)
-                print('Modelo pysentimiento para emociones cargado')
-                return True
-            except Exception as e:
-                print(f"Error al cargar el modelo de pysentimiento para emociones {e}")
-                return False
-        return True
-
 
     ## Para Gemini
     def _ensure_gemini_embeddings_model():
@@ -1215,7 +982,7 @@ def server(input, output, session):
 
 
     ### Insertamos las funciones generales que se usarán en toda la app 
-    def generate_sentiment_analysis(text):
+    def generate_sentiment_analysis2(text):
         text = str(text)
         #if not _ensure_spacy_sentiment_model():
         #    return "Error: Modelo de sentimiento no disponible"
@@ -1285,7 +1052,7 @@ def server(input, output, session):
                 return "Error: Modelos de sentimiento no disponibles"        
 
 
-    def generate_emotions_analysis(text):
+    def generate_emotions_analysis2(text):
         text = str(text)
         if not _ensure_pysentimient_emotions_analyzer():
             return "Error: Modelo de emociones no disponible"
@@ -1300,7 +1067,6 @@ def server(input, output, session):
             "surprise": "Sorpresa", 
             "disgust": "Asco", 
             "neutral": "Neutral"
-
         }    
         try:
             result = analyzer.predict(text)
@@ -1675,7 +1441,7 @@ def server(input, output, session):
                 return f"Error al resumir con Gemini: {e}"
 
     #### Añadido el 26 de Abril 2025
-    def topics_generator_(text):
+    def topics_generator(text):
         if not text:
             return "No hay texto para resumir"
         text = str(text)
@@ -3870,7 +3636,7 @@ def server(input, output, session):
         return ui.p("Selecciona 'Google Maps' en el panel izquierdo y realiza una búsqueda para ver el mapa aquí.")
     
     # ''' Chat de Gemini'''
-    def _ensure_gemini_model_():
+    def _ensure_gemini_model():
         if gemini_model_instance.get() is None:
             if GEMINI_API_KEY:
                 try:

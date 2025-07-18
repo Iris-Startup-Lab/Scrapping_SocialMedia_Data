@@ -3,6 +3,7 @@ beautifulsoup4
 google-api-python-client
 google-generativeai
 googlemaps
+unidecode
 matplotlib
 numpy
 pandas

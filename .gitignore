@@ -5,6 +5,9 @@
 /models
 /Uploaded_files
 *.csv
+*.tsv
+*.xls
+*.xlsx
 ### Para todos los archivos post instalación de Django
 ### Django
 *.log
@@ -19,5 +22,3 @@ test/
 *.exe
 *.chromedriver
 .idea/
-*.xls
-*.xlsx

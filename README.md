@@ -12,8 +12,8 @@ comentarios de diferentes redes sociales y obtener lo siguiente:
 
 ## Software a utilizar
 ### Sitios para alojar bases de datos y aplicación
-#### Firebase
-Este sitio ([Firebase](https://firebase.google.com))  nos ayudará a alojar la aplicación. 
+#### HuggingFace
+Este sitio ([HuggingFace](https://huggingface.co/))  nos ayudará a alojar la aplicación, pero solo como fase de testeo, en el futuro se plantea subirla a AWS para que esté en un modo de producción más robusto que soporte a gran cantidad de usuarios.
 
 
 #### SupaBase

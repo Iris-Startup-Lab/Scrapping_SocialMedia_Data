@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+## Iris Startup Lab 
+'''
+<(*)
+  ( >)
+  /|
+'''
+## Fernando Dorantes Nieto
+
+#-------------------------------------------------------------
+######### Social Media Downloader Shiny App ######
+######### VERSION 0.5 ######
+######### Authors Fernando Dorantes Nieto
+####### This script hosts some useful functions that help to the app to get several things 
+#-------------------------------------------------------------
+
 # utils.py
 import pandas as pd
 from datetime import datetime, timezone

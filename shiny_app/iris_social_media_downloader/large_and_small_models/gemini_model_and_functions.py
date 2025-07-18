@@ -21,16 +21,19 @@ sys.path.append(parent_dir)
 
 import google.generativeai as genai_old ### Antigua librería de Google, mantenimiento terminará el 31 de Agosto de 2025
 ## https://pypi.org/project/google-generativeai/   #### Librería antigua, repo
-from google import genai 
-from config import GEMINI_API_KEY
+from google import genai  ## Nueva librerías de GenAI
 import pandas as pd 
 from shiny import reactive 
+
+from config import GEMINI_API_KEY
 
 ##### Llamando los valores reactivos 
 current_gemini_response = reactive.Value("Carga datos y luego haz una pregunta sobre ellos, o haz una pregunta general. Presiona Enter o el botón verde a la izquierda para activar el bot")
 gemini_embeddings_model = reactive.Value(None)
 gemini_model_instance = reactive.Value(None)
-
+summarizer_pipeline_instance = reactive.Value(None)
+comparison_summary_r = reactive.Value("")
+same_network_comparison_summary_r = reactive.Value("")
 
 ### Actualizar mes a mes y cambiar modelos a modelos más recientes
 free_tier_limits = {
@@ -137,6 +140,52 @@ def _ensure_gemini_model_old():
             current_gemini_response.set("Error: Clave de Gemini no configurada")
             return False 
     return gemini_model_instance.get() is not None 
+
+
+def summary_generator_old(text, platform):   
+    if not text:
+        return "No hay texto para resumir"
+    text = str(text)
+    #if platform=="wikipedia" or platform=="generic_webpage":
+    if platform=="wikipedia2": 
+        if not _ensure_summarizer_pipeline():
+            return "Error: Pipelin de resumen no disponible"
+        summarizer = summarizer_pipeline_instance.get()
+        try:
+            max_bart_input_len = 1024*3
+            if len(text) > max_bart_input_len:
+                text_to_process = text[:max_bart_input_len]
+                print(f"Texto para resumen (BART) truncado a {max_bart_input_len} caracteres.")
+            else: 
+                text_to_process = text
+            print('Comenzando a resumir con BART')
+            summary = summarizer(text_to_process, max_length=200, min_length=40, do_sample=False)[0]['summary_text']
+            print('Resumen con BART terminado.')
+            return f"Resumen (BART):\n{summary}"
+        except Exception as e: 
+                return f"Error al resumir con BART: {e}"
+    else:
+        if not _ensure_gemini_model():
+            return "Error: Modelo de Gemini no disponible"
+        gemini_model = gemini_model_instance.get()
+        max_gemini_input_len = 1000
+        if len(text) > max_gemini_input_len:
+            text_to_process = text[:max_gemini_input_len]
+            print(f"Texto para resumen (Gemini) truncado a {max_gemini_input_len} caracteres.")
+        else: 
+            text_to_process= text
+        summarization_prompt = (
+                "Por favor, resume el siguiente texto extraído de una plataforma de red social. "
+                "Concéntrate en las ideas principales y el sentimiento general si es evidente. "
+                f"El texto es:\n\n---\n{text_to_process}\n---\n\nResumen conciso:"
+        )
+        try:
+            print(f"Enviando a Gemini para resumen: {summarization_prompt[:200]}...")
+            response = gemini_model.generate_content(summarization_prompt)
+            return f"Resumen (Gemini):\n{response.text}"
+        except Exception as e:
+                return f"Error al resumir con Gemini: {e}"
+
 
 def topics_generator_old(text):
     if not text:
