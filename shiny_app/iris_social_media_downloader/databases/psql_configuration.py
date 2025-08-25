@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+## Iris Startup Lab 
+'''
+<(*)
+  ( >)
+  /|
+'''
+### Fernando Dorantes Nieto
+## Fecha de debuggeo: 2025-07-21
+
 import os 
 import sys 
 current_dir = os.path.dirname(os.path.abspath(__file__))

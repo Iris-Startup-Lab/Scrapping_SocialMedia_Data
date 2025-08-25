@@ -24,8 +24,9 @@ import google.generativeai as genai_old ### Antigua librería de Google, manteni
 from google import genai  ## Nueva librerías de GenAI
 import pandas as pd 
 from shiny import reactive 
-
+from typing import Any, Dict, List as TypingList 
 from config import GEMINI_API_KEY
+from large_and_small_models.small_models_models_and_functions import  summarizer_pipeline_instance, _ensure_summarizer_pipeline
 
 ##### Llamando los valores reactivos 
 current_gemini_response = reactive.Value("Carga datos y luego haz una pregunta sobre ellos, o haz una pregunta general. Presiona Enter o el botón verde a la izquierda para activar el bot")
@@ -34,6 +35,8 @@ gemini_model_instance = reactive.Value(None)
 summarizer_pipeline_instance = reactive.Value(None)
 comparison_summary_r = reactive.Value("")
 same_network_comparison_summary_r = reactive.Value("")
+
+##_ensure_gemini_embeddings_model, embed_texts_gemini
 
 ### Actualizar mes a mes y cambiar modelos a modelos más recientes
 free_tier_limits = {
@@ -120,6 +123,22 @@ def _ensure_gemini_embeddings_model():
         else:
             return False 
     return True 
+
+
+
+def embed_texts_gemini(texts: TypingList[str],  task_type="RETRIEVAL_DOCUMENT") -> TypingList[TypingList[float]]:
+    if not _ensure_gemini_embeddings_model():
+        raise Exception('Los embeddings de Gemini no están disponibles')
+        
+    model_name = gemini_embeddings_model.get()
+    try:
+        #result = genai.embed_content(model=model_name, content=texts, task_type=task_type)
+        result = genai.models.embed_content(model=model_name, contents=texts, task_type=task_type)
+
+        return result['embedding']
+    except Exception as e:
+        print('Error al generar los embeddings de Gemini')
+        return [[] for _ in texts]
 
 
 
@@ -238,3 +257,16 @@ def _ensure_gemini_embeddings_model_old():
     return True 
 
 
+
+
+def embed_texts_gemini_old(texts: TypingList[str],  task_type="RETRIEVAL_DOCUMENT") -> TypingList[TypingList[float]]:
+    if not _ensure_gemini_embeddings_model():
+        raise Exception('Los embeddings de Gemini no están disponibles')
+        
+    model_name = gemini_embeddings_model.get()
+    try:
+        result = genai.embed_content(model=model_name, content=texts, task_type=task_type)
+        return result['embedding']
+    except Exception as e:
+        print('Error al generar los embeddings de Gemini')
+        return [[] for _ in texts]
