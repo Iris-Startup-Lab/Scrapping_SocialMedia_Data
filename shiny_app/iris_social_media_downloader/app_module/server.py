@@ -46,7 +46,7 @@ import tweepy
 from googleapiclient.discovery import build
 import spacy
 from transformers import pipeline, AutoModelForSequenceClassification, AutoTokenizer, AutoConfig
-import google.generativeai as genai
+import google.generativeai as genai ###### Cambiar esta librería por la nueva
 from openai import OpenAI
 from langchain_openai import ChatOpenAI as LangchainChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -128,6 +128,9 @@ def server(input, output, session):
     comparison_summary_r = reactive.Value("")
     comparison_chat_history_r = reactive.Value([]) # Para el chatbot comparativo
     infographic_status_r = reactive.Value("")
+    # Reactives para Geolocalización
+    user_location_r = reactive.Value(None)
+    geolocation_status_r = reactive.Value("Haz clic en el botón para obtener tu ubicación.")
 
      # Reactive Values for Same-Network Comparison Module
     same_network_comparison_data_r = reactive.Value(None)
@@ -154,6 +157,23 @@ def server(input, output, session):
                 #nav_panel_modulo_comparacion(),
                 nav_panel_scraper_tablas_chatbot(),
                 id="pestana_principal_seleccionada"
+        return ui.tags.div( # Envolvemos en un div para poder añadir el script
+            ui.tags.script(src="get_location.js"), # Incluimos el archivo JS
+            ui.layout_sidebar(
+                ui.sidebar(
+                    ui.output_ui("sidebar_dinamico"), # Contenido del sidebar cambiará
+                    width=350
+                ),
+                ui.navset_card_tab( # Pestañas principales
+                    nav_panel_comparacion_misma_red(),
+                    nav_panel_base_datos_y_chatbot(),
+                    nav_panel_analisis_y_visualizaciones(),
+                    #nav_panel_comparison_module(), # Nueva pestaña de comparación
+                    nav_panel_cross_source_comparison(),
+                    #nav_panel_modulo_comparacion(),
+                    nav_panel_scraper_tablas_chatbot(),
+                    id="pestana_principal_seleccionada"
+                )
             )
         )
 
@@ -214,6 +234,13 @@ def server(input, output, session):
                 ui.output_text("current_session_id_display"), # Para mostrar el ID actual
                 ui.input_action_button("clear_comparison_session", "Limpiar Sesión de Comparación Actual", class_="btn-warning btn-sm mt-1"),
                 ui.hr(),
+                # --- NUEVA UI DE GEOLOCALIZACIÓN ---
+                ui.h5("Geolocalización del Usuario"),
+                ui.input_action_button("get_location_btn", "Obtener mi Ubicación Actual",
+                                       class_="btn-info btn-sm",
+                                       onclick="sendLocationToShiny();"), # Llama a la función de JS
+                ui.output_text_verbatim("location_output", placeholder=True),
+                ui.hr(),
                 ui.input_action_button("execute", " Scrapear!!", icon=ui.tags.i(class_="fas fa-play"), class_="btn-primary"),
                 ui.hr(),
                 ui.input_action_button("boton_logout", "Cerrar Sesión", class_="btn-danger btn-sm btn-block")
@@ -222,7 +249,7 @@ def server(input, output, session):
     @render.image
     def logo1():
         from shiny.types import ImgData
-        dir = Path(__file__).resolve().parent
+        dir = Path(__file__).resolve().parent.parent
         img: ImgData = {
             "src": str(dir / "www/Logos_GS_Iris.png"),
             "alt": "Logo 1",
@@ -233,7 +260,8 @@ def server(input, output, session):
     @render.image
     def icon():
         from shiny.types import ImgData
-        dir = Path(__file__).resolve().parent
+        #dir = Path(__file__).resolve().parent
+        dir = Path(__file__).resolve().parent.parent
         img: ImgData = {
             "src": str(dir / "www/Icon_chismoso_Gemini2.png"), 
             "alt": "Icon",
@@ -341,6 +369,39 @@ def server(input, output, session):
         except Exception as e:
             print(f"Error fetching comparison data for session {session_id}: {e}")
             return None
+
+    # --- Lógica de Geolocalización ---
+    @reactive.Effect
+    @reactive.event(input.geolocation_data)
+    def _handle_geolocation_data():
+        data = input.geolocation_data()
+        if data:
+            print(f"Datos de geolocalización recibidos: {data}")
+            user_location_r.set(data)
+        else:
+            # Esto puede ocurrir si hubo un error en el lado del cliente
+            print("Datos de geolocalización recibidos como nulos/vacíos.")
+            user_location_r.set(None)
+
+    @reactive.Effect
+    @reactive.event(input.geolocation_status)
+    def _handle_geolocation_status():
+        status = input.geolocation_status()
+        if status:
+            print(f"Estado de geolocalización: {status}")
+            geolocation_status_r.set(status)
+
+    @output
+    @render.text
+    def location_output():
+        location = user_location_r.get()
+        status = geolocation_status_r.get()
+        if location:
+            lat = location.get('lat', 'N/A')
+            lon = location.get('lon', 'N/A')
+            acc = location.get('accuracy', 'N/A')
+            return f"Lat: {lat:.5f}, Lon: {lon:.5f}\n(Precisión: {acc:.1f} metros)\nStatus: {status}"
+        return f"Status: {status}"
 
     @render.image
     def app_logo():

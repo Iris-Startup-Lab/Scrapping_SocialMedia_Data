@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 ## Iris Startup Lab 
+## Fernando Dorantes Nieto
 '''
 <(*)
   ( >)
@@ -56,7 +57,7 @@ PG_PORT = "5432"
 PG_DBNAME =  "postgres"
 PG_USER = SUPABASE_USER_PSQL
 PG_PASSWORD = SUPABASE_KEY_PSQL
-
+RAPID_API_KEY = os.getenv("RAPID_API_KEY")
 
 # Rutas de ChromeDriver y Chrome Binary
 if os.name == 'nt':  # Windows

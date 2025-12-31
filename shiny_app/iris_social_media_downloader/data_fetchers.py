@@ -4,6 +4,7 @@ import re
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from typing import List
 import tweepy
 from googleapiclient.discovery import build
 import googlemaps
@@ -74,6 +75,51 @@ def get_maps_reviews(query: str):
     except Exception as e:
         logger.error(f"Error en get_maps_reviews: {e}")
         return pd.DataFrame({'Error': [f"Error al obtener reseñas de Google Maps: {e}"]}), None
+
+def get_maps_reviews_multiple(queries: List[str]) -> pd.DataFrame:
+    """
+    Obtiene reseñas de Google Maps para múltiples búsquedas y las combina en un solo DataFrame.
+    """
+    if not MAPS_API_KEY:
+        return pd.DataFrame({'Error': ["Clave API de Google Maps no configurada."]})
+    
+    all_reviews = []
+    gmaps = googlemaps.Client(key=MAPS_API_KEY)
+
+    for query in queries:
+        try:
+            places_result = gmaps.places(query=query)
+            if not places_result or not places_result.get('results'):
+                logger.warning(f"No se encontraron lugares para la consulta: '{query}'")
+                continue
+
+            place_id = places_result['results'][0]['place_id']
+            # Pedimos 'name' para añadirlo al dataframe y diferenciar las reseñas
+            place_details = gmaps.place(place_id=place_id, fields=['name', 'review'])
+            
+            reviews = place_details.get('result', {}).get('reviews', [])
+            if not reviews:
+                place_name_for_log = place_details.get('result', {}).get('name', query)
+                logger.info(f"El lugar '{place_name_for_log}' no tiene reseñas.")
+                continue
+
+            place_name = place_details.get('result', {}).get('name', query)
+            for review in reviews:
+                review['place_name'] = place_name
+
+            all_reviews.extend(reviews)
+
+        except Exception as e:
+            logger.error(f"Error al obtener reseñas para la consulta '{query}': {e}")
+            continue
+    
+    if not all_reviews:
+        return pd.DataFrame({'Mensaje': ["No se encontraron reseñas para ninguna de las consultas."]})
+
+    df = pd.DataFrame(all_reviews)
+    df.rename(columns={'text': 'comment'}, inplace=True)
+    df['origin'] = 'maps'
+    return df
 
 def get_reddit_comments(url: str) -> pd.DataFrame:
     if not all([REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT]):
