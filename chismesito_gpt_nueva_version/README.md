@@ -23,7 +23,6 @@ short_description: Descubre lo que dicen las redes sociales (análisis + RAG)
 
 ## 📸 Interfaz de la Aplicación
 
-*(Inserta aquí capturas del Wizard de tres pasos: Configuración, Dashboard y Chat)*
 <!-- ![Wizard Paso 1: Configuración](./docs/images/step1_config.png) -->
 <!-- ![Wizard Paso 2: Dashboard](./docs/images/step2_dashboard.png) -->
 <!-- ![Wizard Paso 3: Chat RAG](./docs/images/step3_chat.png) -->
