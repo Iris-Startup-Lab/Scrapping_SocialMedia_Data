@@ -1,1 +1,0 @@
-#### Funciones generales útiles para varios casos 

@@ -1,0 +1,2 @@
+chromium-driver
+playwright install

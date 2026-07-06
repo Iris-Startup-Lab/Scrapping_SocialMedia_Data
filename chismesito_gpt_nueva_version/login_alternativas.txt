@@ -1,0 +1,238 @@
+
+# ══════════════════════════════════════════════════════════════════════
+#   ChismesitoGPT v2 — Alternativas de Login Evaluadas
+#   Fecha de evaluación: Julio 2026
+# ══════════════════════════════════════════════════════════════════════
+
+CONTEXTO
+────────
+La app comparte un proyecto Supabase con otros equipos de la organización.
+No se puede crear un proyecto Supabase nuevo por costos.
+No se pueden modificar los Auth Settings globales del proyecto (afectaría
+a otras apps que usan el mismo proyecto).
+
+Por ahora NO se guardan sesiones persistentes (cada recarga = nuevo login).
+Los usuarios NO se registran solos — el admin crea las cuentas manualmente.
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 1 — Gradio nativo (gr.LoginButton / HTTP Basic Auth)
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Gradio ofrece autenticación básica con lista de usuarios hardcodeada:
+    demo.launch(auth=[("admin", "password123")])
+  También existe gr.LoginButton para OAuth con HuggingFace.
+
+Pros:
+  + Implementación de 5 minutos (1 línea de código)
+  + Sin dependencias externas
+  + Funciona offline
+
+Contras:
+  - Credenciales hardcodeadas en el código (peligro si se sube a GitHub)
+  - Sin hashing de contraseñas (plaintext)
+  - Sin control por usuario (todos ven todos los datos — no hay user_id)
+  - No hay way de cambiar contraseña sin tocar el código
+  - No escala: agregar usuario = modificar código
+  - No hay sesiones reales ni JWT
+  - RLS de Supabase no funciona (no hay user_id real)
+  - Sin rate limiting
+
+Veredicto: ❌ DESCARTADA — Es el equivalente a poner un candado de juguete.
+           Solo sirve para demos rápidas, no para producción.
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 2 — Supabase Auth puro (sin whitelist)
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Usar Supabase Auth sign_in_with_password() directamente.
+  Para evitar registros no autorizados, deshabilitar "Allow new users
+  to sign up" en Authentication → Settings del proyecto Supabase.
+
+Pros:
+  + Contraseñas hasheadas por Supabase (bcrypt)
+  + JWT real → RLS funciona con auth.uid()
+  + Gestión de usuarios desde el Dashboard
+  + Tokens con expiración automática
+
+Contras:
+  - ⚠️ PROBLEMA CRÍTICO: "Allow new users to sign up" es a nivel de
+    PROYECTO, no de schema. Deshabilitarlo afecta a TODAS las apps
+    que comparten el mismo proyecto Supabase.
+  - Cualquier usuario con cuenta en auth.users del proyecto compartido
+    podría intentar entrar a ChismesitoGPT
+  - Sin barrera de control propio si los Auth Settings no se pueden tocar
+
+Veredicto: ❌ DESCARTADA como solución única — El proyecto es compartido.
+           Se usa COMO PARTE de la solución final (ver Alternativa 5).
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 3 — Proyecto Supabase nuevo y dedicado
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Crear un proyecto Supabase exclusivo para ChismesitoGPT.
+  Migrar schema.sql al nuevo proyecto. Solo cambiar 3 variables en .env.
+
+Pros:
+  + Control total de Auth Settings sin afectar a nadie
+  + RLS perfecto con FK a auth.users
+  + Aislamiento total de datos
+  + Migración simple: 30-45 minutos (solo cambiar .env + re-ejecutar schema.sql)
+
+Contras:
+  - Costo adicional (plan gratuito de Supabase: 2 proyectos máximo,
+    y el segundo proyecto ya podría estar en uso)
+  - No se puede implementar por restricciones de presupuesto actuales
+
+Veredicto: ⚠️ IDEAL TÉCNICAMENTE, pero descartada por costos.
+           Recomendada si el presupuesto lo permite en el futuro.
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 4 — Whitelist solo en .env (sin Supabase Auth)
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Lista de emails autorizados en .env. Sin Supabase Auth.
+  El "usuario" sería simplemente el email verificado contra la lista,
+  con una contraseña manejada por la app (no Supabase).
+
+Pros:
+  + Sin dependencia de Supabase Auth
+  + Control total de quién entra
+
+Contras:
+  - Habría que implementar hashing de contraseñas manualmente (bcrypt)
+  - Sin JWT real → RLS de Supabase no funciona
+  - Sin user_id real → los datos en Supabase no estarían vinculados
+    a usuarios reales, volviendo al problema del user_id hardcodeado
+  - Más código a mantener
+
+Veredicto: ❌ DESCARTADA — Reinventa la rueda sin los beneficios de Supabase Auth.
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 5 — ✅ IMPLEMENTADA: Whitelist .env + Supabase Auth
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Sistema de doble barrera:
+    1. Whitelist de emails en ALLOWED_EMAILS (.env) → barrera propia
+    2. Supabase Auth sign_in_with_password() → valida contraseña, retorna JWT
+  El backend usa service_key (bypassa RLS), pero siempre con el user_id
+  real extraído del JWT.
+
+Flujo completo:
+  Login intento
+      │
+      ├─ ¿Email en ALLOWED_EMAILS? ─── NO ──► "Credenciales incorrectas"
+      │  (sin revelar que existe whitelist)
+      │
+      ├─ ¿Rate limit ok? (<5 intentos/5min) ── NO ──► "Espera Xs"
+      │
+      ├─ Supabase sign_in_with_password() ─── FALLA ──► "Credenciales incorrectas"
+      │
+      └─ JWT en gr.State (por usuario, no global) ─── OK ──► ✅ Acceso
+
+Pros:
+  + ✅ No toca Auth Settings globales del proyecto compartido
+  + ✅ Contraseñas hasheadas por Supabase (bcrypt)
+  + ✅ JWT real → RLS con auth.uid() funciona
+  + ✅ user_id real (UUID de auth.users) en unified_comments
+  + ✅ Control propio: ALLOWED_EMAILS en .env (no depende de Supabase config)
+  + ✅ Rate limiting en memoria (anti-brute force)
+  + ✅ Estado por usuario con gr.State (no hay data leak entre usuarios simultáneos)
+  + ✅ Agregar/quitar usuario = editar .env (sin tocar código)
+  + ✅ Tabla chismesito_gpt.allowed_users como complemento (desactivar sin reiniciar)
+  + ✅ Sin costo adicional
+
+Contras:
+  - El rate limiting vive en memoria del servidor → si el servidor se reinicia,
+    los contadores se resetean (aceptable para esta escala)
+  - El admin debe crear las cuentas en DOS lugares: Supabase Auth + ALLOWED_EMAILS
+    (ligera fricción operativa)
+  - Sin sesiones persistentes por ahora (cada recarga = nuevo login)
+    → se implementará en el futuro
+
+Veredicto: ✅ IMPLEMENTADA — Mejor balance entre seguridad, costo y complejidad
+           para el contexto de proyecto Supabase compartido.
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 6 — OAuth (Google / GitHub / Microsoft)
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Usar OAuth via Supabase Auth Providers (Google, GitHub, etc.)
+  El usuario hace login con su cuenta corporativa/personal.
+
+Pros:
+  + Sin gestión de contraseñas
+  + Experiencia de usuario familiar
+  + SSO si la empresa ya usa Google Workspace
+
+Contras:
+  - Requiere configurar OAuth app en Google/GitHub Console
+  - Requiere HTTPS en producción (obligatorio para OAuth callbacks)
+  - Sin sesiones persistentes en Gradio → el callback de OAuth es complicado
+    de integrar con gr.State
+  - La whitelist sigue siendo necesaria (no todo el que tenga Google puede entrar)
+
+Veredicto: ⏳ DESCARTADA por ahora, viable en el futuro si se migra a
+           HuggingFace Spaces o a un servidor con HTTPS configurado.
+
+
+══════════════════════════════════════════════════════════════════════════
+  ALTERNATIVA 7 — Django / FastAPI con JWT propio
+══════════════════════════════════════════════════════════════════════════
+
+Descripción:
+  Migrar el backend a Django o FastAPI, implementar auth completo con
+  JWT propio (python-jose / djangorestframework-simplejwt).
+
+Pros:
+  + Control total del flujo de auth
+  + Sesiones persistentes con refresh tokens
+  + Pueden coexistir múltiples apps
+
+Contras:
+  - Migración mayor (días de trabajo)
+  - Gradio no es la UI ideal para este stack
+  - Ya está documentado en migration_plan_v3_react_django.md como plan futuro
+
+Veredicto: ⏳ PARA EL FUTURO — Ya hay un plan de migración documentado.
+           No tiene sentido hacerlo ahora mientras la app es Gradio.
+
+
+══════════════════════════════════════════════════════════════════════════
+  TABLA RESUMEN
+══════════════════════════════════════════════════════════════════════════
+
+Alternativa                     | Seguridad | Complejidad | Costo | Estado
+─────────────────────────────────────────────────────────────────────────
+1. Gradio auth nativo           | ⭐        | ⭐          | $0    | ❌ Descartada
+2. Supabase Auth puro           | ⭐⭐⭐    | ⭐⭐        | $0    | ❌ Descartada (proyecto compartido)
+3. Proyecto Supabase nuevo      | ⭐⭐⭐⭐⭐ | ⭐⭐        | $+    | ⚠️ Ideal, sin presupuesto
+4. Solo whitelist .env          | ⭐⭐       | ⭐⭐        | $0    | ❌ Descartada
+5. Whitelist + Supabase Auth ✅ | ⭐⭐⭐⭐  | ⭐⭐⭐      | $0    | ✅ IMPLEMENTADA
+6. OAuth (Google/GitHub)        | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐    | $0    | ⏳ Futuro
+7. Django/FastAPI + JWT propio  | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐  | $0    | ⏳ Futuro (ver migration_plan_v3)
+
+
+══════════════════════════════════════════════════════════════════════════
+  ARCHIVOS RELACIONADOS
+══════════════════════════════════════════════════════════════════════════
+
+  auth/supabase_auth.py          → Implementación del login (doble barrera)
+  .env                           → ALLOWED_EMAILS + SUPABASE_ANON_KEY
+  supabase/schema.sql            → Tablas unified_comments, chat_history
+  supabase/rls_policies.sql      → Políticas RLS por usuario
+  migration_plan_v3_react_django.md → Plan futuro de migración a Django
+  mejoras_sugeridas.txt          → Plan original evaluado
+  implementation_plan.md         → Plan de implementación adoptado
+

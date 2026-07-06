@@ -3,6 +3,7 @@
 *.env
 /__pycache__
 /models
+.idea/
 /Uploaded_files
 *.csv
 *.tsv

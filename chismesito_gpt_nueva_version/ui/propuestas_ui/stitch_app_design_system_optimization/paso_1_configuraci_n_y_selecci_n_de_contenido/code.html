@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #e6edf3;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .primary-gradient {
+            background: linear-gradient(to right, #0d9488, #0891b2);
+        }
+
+        .active-glow {
+            box-shadow: 0 2px 12px rgba(13, 148, 136, 0.3);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .social-chip-active {
+            background-color: rgba(13, 148, 136, 0.15);
+            border: 1px solid rgba(13, 148, 136, 0.5);
+            color: #5eead4;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .accordion-open .accordion-content {
+            max-height: 500px;
+        }
+        .accordion-open .chevron {
+            transform: rotate(180deg);
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#006a61",
+                    "secondary-fixed-dim": "#6cd3f7",
+                    "border-active": "rgba(13,148,136,0.5)",
+                    "primary": "#6bd8cb",
+                    "sentiment-negative": "#f87171",
+                    "sentiment-positive": "#10b981",
+                    "outline": "#879391",
+                    "tertiary": "#4ddcc6",
+                    "on-secondary-fixed-variant": "#004e61",
+                    "primary-fixed-dim": "#6bd8cb",
+                    "bg-surface": "rgba(255,255,255,0.04)",
+                    "on-secondary-fixed": "#001f28",
+                    "sentiment-neutral": "#94a3b8",
+                    "on-primary": "#003732",
+                    "on-tertiary": "#003730",
+                    "bg-base": "#0d1117",
+                    "on-primary-fixed-variant": "#005049",
+                    "secondary-fixed": "#b7eaff",
+                    "text-primary": "#e6edf3",
+                    "error-container": "#93000a",
+                    "outline-variant": "#3d4947",
+                    "secondary": "#6cd3f7",
+                    "surface-container-highest": "#31353c",
+                    "on-secondary-container": "#002e3b",
+                    "surface-container-low": "#181c22",
+                    "surface-variant": "#31353c",
+                    "tertiary-fixed": "#6ef9e2",
+                    "text-secondary": "rgba(255,255,255,0.55)",
+                    "on-secondary": "#003543",
+                    "deepseek-blue": "#5B8DEF",
+                    "inverse-surface": "#dfe2eb",
+                    "claude-orange": "#D97757",
+                    "on-tertiary-fixed": "#00201b",
+                    "surface-dim": "#10141a",
+                    "bg-surface-hover": "rgba(255,255,255,0.08)",
+                    "tertiary-container": "#00a391",
+                    "on-tertiary-fixed-variant": "#005047",
+                    "surface-bright": "#353940",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#4ddcc6",
+                    "openai-green": "#74AA9C",
+                    "text-muted": "rgba(255,255,255,0.35)",
+                    "primary-container": "#29a195",
+                    "background": "#10141a",
+                    "primary-fixed": "#89f5e7",
+                    "on-surface": "#dfe2eb",
+                    "surface-container-high": "#262a31",
+                    "surface-container-lowest": "#0a0e14",
+                    "border-subtle": "rgba(255,255,255,0.10)",
+                    "surface-tint": "#6bd8cb",
+                    "surface": "#10141a",
+                    "on-surface-variant": "#bcc9c6",
+                    "gemini-blue": "#4285F4",
+                    "error": "#ffb4ab",
+                    "on-error": "#690005",
+                    "secondary-container": "#269dbe",
+                    "surface-container": "#1c2026",
+                    "on-primary-fixed": "#00201d",
+                    "on-background": "#dfe2eb",
+                    "on-tertiary-container": "#00302a",
+                    "inverse-on-surface": "#2d3137",
+                    "on-primary-container": "#00302b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap": "1.5rem",
+                    "section-padding": "1.5rem",
+                    "container-margin": "2rem",
+                    "gutter-md": "1rem",
+                    "gutter-sm": "0.625rem"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-xl-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "body-lg": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-xl-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-lg": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-xl": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-text-primary min-h-screen">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant flex justify-between items-center px-section-padding h-16 w-full">
+<div class="flex items-center gap-4">
+<span class="font-headline-lg text-headline-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+                ChismesitoGPT v2
+            </span>
+</div>
+<div class="flex items-center gap-stack-gap">
+<div class="hidden lg:flex items-center gap-2">
+<span class="px-3 py-1 rounded-full bg-openai-green/10 text-openai-green border border-openai-green/30 text-label-sm font-label-sm">GPT-4o</span>
+<span class="px-3 py-1 rounded-full bg-claude-orange/10 text-claude-orange border border-claude-orange/30 text-label-sm font-label-sm">Claude 3.5</span>
+<span class="px-3 py-1 rounded-full bg-deepseek-blue/10 text-deepseek-blue border border-deepseek-blue/30 text-label-sm font-label-sm">DeepSeek v3</span>
+</div>
+<div class="flex items-center gap-gutter-md">
+<span class="material-symbols-outlined text-text-secondary cursor-pointer hover:text-primary transition-colors">account_circle</span>
+<span class="material-symbols-outlined text-text-secondary cursor-pointer hover:text-primary transition-colors">settings</span>
+</div>
+</div>
+</nav>
+<!-- Main Layout -->
+<main class="pt-24 pb-20 md:pb-8 min-h-screen flex flex-col justify-center max-w-5xl mx-auto">
+<!-- Stepper -->
+<div class="mb-stack-gap px-section-padding hidden md:flex items-center justify-center gap-4">
+<div class="flex items-center gap-2 text-primary">
+<span class="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center border border-primary/50 text-label-sm font-bold">1</span>
+<span class="font-label-md">Configuración &amp; Descubrimiento</span>
+</div>
+<div class="h-px bg-outline-variant w-16"></div>
+<div class="flex items-center gap-2 text-text-secondary">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant text-label-sm">2</span>
+<span class="font-label-md">Dashboard</span>
+</div>
+<div class="h-px bg-outline-variant w-16"></div>
+<div class="flex items-center gap-2 text-text-secondary">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant text-label-sm">3</span>
+<span class="font-label-md">Chat RAG</span>
+</div>
+</div>
+<!-- Config Panel -->
+<div class="flex-1 px-section-padding pb-stack-gap overflow-y-auto w-full">
+<!-- Header Section -->
+<header class="mb-stack-gap">
+<h1 class="font-headline-xl text-headline-xl text-primary mb-2">Configurar Búsqueda</h1>
+<p class="font-body-md text-text-secondary">Define los parámetros de recolección de inteligencia social para tu próximo análisis.</p>
+</header>
+<!-- Accordion: Calculadora de Costos -->
+<section class="mb-stack-gap glass-panel rounded-xl transition-all duration-300 border border-outline-variant" id="cost-accordion">
+<button class="w-full flex items-center justify-between p-gutter-md" onclick="toggleAccordion()">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">payments</span>
+<span class="font-label-md text-label-md uppercase tracking-wider text-text-primary">Calculadora de costos estimados</span>
+</div>
+<span class="material-symbols-outlined chevron transition-transform duration-300">expand_more</span>
+</button>
+<div class="accordion-content">
+<div class="p-gutter-md pt-0 grid grid-cols-1 md:grid-cols-3 gap-gutter-md">
+<div class="p-4 bg-surface-container-low rounded-lg border border-outline-variant">
+<p class="text-label-sm text-text-secondary mb-1">Tokens Estimados</p>
+<p class="text-headline-lg font-headline-lg text-primary">1.2M</p>
+</div>
+<div class="p-4 bg-surface-container-low rounded-lg border border-outline-variant">
+<p class="text-label-sm text-text-secondary mb-1">Costo de API</p>
+<p class="text-headline-lg font-headline-lg text-secondary">$0.45 USD</p>
+</div>
+<div class="p-4 bg-surface-container-low rounded-lg border border-outline-variant">
+<p class="text-label-sm text-text-secondary mb-1">Tiempo de Scraping</p>
+<p class="text-headline-lg font-headline-lg text-tertiary">~45s</p>
+</div>
+</div>
+</div>
+</section>
+<!-- LLM Selection Row -->
+<div class="flex flex-wrap items-center gap-gutter-md mb-stack-gap">
+<div class="flex items-center gap-2 bg-openai-green/10 border border-openai-green/20 px-3 py-1.5 rounded-full">
+<div class="w-2 h-2 rounded-full bg-openai-green animate-pulse"></div>
+<span class="text-label-sm font-label-sm text-openai-green uppercase tracking-tighter">Modelo Activo</span>
+</div>
+<div class="relative min-w-[240px]">
+<select class="w-full bg-surface-container-highest border border-outline-variant rounded-lg px-4 py-2 font-body-md text-text-primary focus:ring-2 focus:ring-primary focus:outline-none appearance-none">
+<option value="gpt4o">OpenAI GPT-4o (Recomendado)</option>
+<option value="claude35">Anthropic Claude 3.5 Sonnet</option>
+<option value="deepseekv3">DeepSeek V3 (Económico)</option>
+<option value="gemini15">Google Gemini 1.5 Pro</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-2.5 pointer-events-none text-text-secondary">expand_more</span>
+</div>
+</div>
+<!-- Bento Grid - Configuration Controls -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-stack-gap">
+<!-- Social Chips Selection -->
+<div class="glass-panel p-gutter-md rounded-xl border border-outline-variant">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-label-md text-label-md text-text-primary uppercase tracking-widest">Fuentes de Datos</h3>
+<span class="text-label-sm text-text-secondary">8 Seleccionadas</span>
+</div>
+<div class="grid grid-cols-4 gap-gutter-sm">
+<!-- Chips manually rendered to follow visual principles -->
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">video_library</span>
+<span class="text-label-sm">YouTube</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">chat</span>
+<span class="text-label-sm">X</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">forum</span>
+<span class="text-label-sm">Reddit</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">face_nod</span>
+<span class="text-label-sm">Facebook</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">photo_camera</span>
+<span class="text-label-sm">Instagram</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">music_video</span>
+<span class="text-label-sm">TikTok</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">map</span>
+<span class="text-label-sm">Maps</span>
+</button>
+<button class="social-chip-active flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined mb-1">shop</span>
+<span class="text-label-sm">Store</span>
+</button>
+</div>
+<!-- Platform Comment Slider -->
+<div class="mt-6">
+<div class="flex justify-between mb-2">
+<label class="text-label-sm text-text-secondary uppercase">Comentarios por plataforma</label>
+<span class="text-primary font-bold" id="comment-val">25</span>
+</div>
+<input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" max="50" min="1" oninput="document.getElementById('comment-val').innerText = this.value" type="range" value="25"/>
+</div>
+</div>
+<!-- Google Maps Section -->
+<div class="glass-panel p-gutter-md rounded-xl border border-outline-variant flex flex-col">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-label-md text-label-md text-text-primary uppercase tracking-widest">Geo-Segmentación</h3>
+<div class="flex gap-4">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary bg-bg-surface border-outline-variant focus:ring-primary focus:ring-offset-bg-base" name="geo-mode" type="radio"/>
+<span class="text-label-sm text-text-secondary">GPS</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="w-4 h-4 text-primary bg-bg-surface border-outline-variant focus:ring-primary focus:ring-offset-bg-base" name="geo-mode" type="radio"/>
+<span class="text-label-sm text-text-secondary">Coordenadas</span>
+</label>
+</div>
+</div>
+<div class="relative w-full h-32 rounded-lg overflow-hidden border border-outline-variant mb-4">
+<img class="w-full h-full object-cover grayscale brightness-75 hover:grayscale-0 transition-all duration-500" data-alt="A detailed digital map interface showing a futuristic obsidian dark mode satellite view of Mexico City, featuring glowing cyan street lines and neon teal hotspots indicating high social activity densities. The aesthetic is clean and technical, reminiscent of a high-end data analytics dashboard, with soft ambient light emanating from the active markers." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSDtl_EI5PyYASJolgtrMU_6rqw9xjwffGfd-B2B4EKACFjcJakPB70_fuZmF8rP-AgIl16ouEBdYCD7CSRo9GXq1AtWJ6zEkpRF_07nhFuj71VnEK4sPwpKTLOmLFRAWkA94uXd2c2SEUTE9USdqharapCEHkhRTuYhkjCmrWGhp3Gl87bBHlI8bBSMWA3sdn6H5yDC8y4kpNBOF7AW7sk98SBafWKo01LPUgamPAgEuNi5FVbnTKSkUWGBPXl63AcyHTUtWNf3SE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent pointer-events-none"></div>
+<div class="absolute bottom-2 left-2 px-2 py-1 bg-surface-container-low/80 backdrop-blur rounded text-[10px] text-primary-fixed-dim border border-primary/20">CDMX, Mexico</div>
+</div>
+<div>
+<div class="flex justify-between mb-2">
+<label class="text-label-sm text-text-secondary uppercase">Radio de búsqueda (km)</label>
+<span class="text-secondary font-bold" id="radius-val">5.0</span>
+</div>
+<input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" max="25" min="0.5" oninput="document.getElementById('radius-val').innerText = parseFloat(this.value).toFixed(1)" step="0.5" type="range" value="5"/>
+</div>
+</div>
+</div>
+<!-- Analysis Mode & CTA -->
+<section class="mt-stack-gap">
+<div class="flex flex-col gap-2 mb-4">
+<h2 class="font-headline-lg text-headline-lg text-primary">Contenido Encontrado</h2>
+<p class="font-body-md text-text-secondary">Selecciona los posts o videos que deseas incluir en el análisis.</p>
+</div>
+<div class="flex flex-col gap-stack-gap">
+<!-- YouTube Group -->
+<div>
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-sentiment-negative">video_library</span>
+<h3 class="font-label-md text-label-md uppercase tracking-widest text-text-primary">YouTube Trends</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter-md">
+<!-- Card 1 -->
+<div class="glass-panel rounded-xl overflow-hidden border border-outline-variant relative group hover:border-primary/50 transition-all">
+<div class="absolute top-2 right-2 z-10">
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary bg-surface-container-highest cursor-pointer" type="checkbox"/>
+</div>
+<div class="h-32 bg-surface-container-highest overflow-hidden">
+<img alt="Thumbnail" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGQVNt66SIMnF00_NlECN6vKJZa0sDmBCXEDPbzN56DsKQgLzQNDv5321p2gt5_u8YJRBGZKWNMfA1lFA2rq07gUJpAArPjnuI8Lw5CvaQ-RKsf-tRT9GAF4lse7ohQcxcHTtwGvWXuoD3HcX7jvmaJJE2lzx8QClATr9MJrj4khM4H80x_NFR2S1zUgKGCxSVpYKS4zK2f2PPkhmsLtk-eCl14RlA_pyLxbC_SFl1C4bGNqA9Q0f-UjzEprV1gp3hoVX12IE7Lma3"/>
+</div>
+<div class="p-3">
+<h4 class="font-label-md text-text-primary line-clamp-2 mb-2">Análisis de Tendencias IA 2024: Lo que nadie te dice</h4>
+<div class="flex justify-between items-end">
+<div class="text-[10px] text-text-secondary">
+<p>TechVision • 1.2M vistas</p>
+<a class="text-primary hover:underline" href="#">Ver video</a>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-sm">open_in_new</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-panel rounded-xl overflow-hidden border border-outline-variant relative group hover:border-primary/50 transition-all">
+<div class="absolute top-2 right-2 z-10">
+<input class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary bg-surface-container-highest cursor-pointer" type="checkbox"/>
+</div>
+<div class="h-32 bg-surface-container-highest overflow-hidden">
+<img alt="Thumbnail" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyu0o0KJQ7wTZu00rd2Ar5WFOTq6BR0MkNOHuWyMAyz_eaOnb8bqoFPHI1VMBG15Cp2YsWQsBf5D7hbqezlUOnHkPFKsuDa5mtE2tkGhqmOBweH5esM4c45JvhuaBnNnXGluVb211-P_skInj1k0yuXlnJ6K06sDGOzT_irOUPOR5eUht5yheMkLrra4gBmgbyyqXVna314nVsuNov-apKPWUWB4EhxEsG6N5IGD9ooAEwdHd_HSFggimiIlItxqrQF3eVJqajncAn"/>
+</div>
+<div class="p-3">
+<h4 class="font-label-md text-text-primary line-clamp-2 mb-2">Hardware del Futuro: Review Completa</h4>
+<div class="flex justify-between items-end">
+<div class="text-[10px] text-text-secondary">
+<p>GadgetCentral • 450k vistas</p>
+<a class="text-primary hover:underline" href="#">Ver video</a>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-sm">open_in_new</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Reddit Group -->
+<div>
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-claude-orange">forum</span>
+<h3 class="font-label-md text-label-md uppercase tracking-widest text-text-primary">Reddit Discussions</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter-md">
+<!-- Card 3 -->
+<div class="glass-panel rounded-xl overflow-hidden border border-outline-variant relative group hover:border-primary/50 transition-all">
+<div class="absolute top-2 right-2 z-10">
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary bg-surface-container-highest cursor-pointer" type="checkbox"/>
+</div>
+<div class="p-4">
+<h4 class="font-label-md text-text-primary line-clamp-2 mb-2">¿Es este el fin de la programación tradicional? Debate abierto</h4>
+<div class="flex justify-between items-end mt-4">
+<div class="text-[10px] text-text-secondary">
+<p>r/technology • 2.4k upvotes</p>
+<a class="text-primary hover:underline" href="#">Ver post</a>
+</div>
+<span class="material-symbols-outlined text-text-secondary text-sm">chat_bubble</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section><div class="mt-stack-gap glass-panel p-gutter-md rounded-xl border border-outline-variant">
+<div class="flex flex-col md:flex-row items-center justify-between gap-gutter-md">
+<div class="flex flex-col gap-2">
+<span class="text-label-sm text-text-secondary uppercase">Modo de Procesamiento</span>
+<div class="flex p-1 bg-surface-container-low rounded-lg border border-outline-variant w-fit">
+<button class="px-4 py-1.5 rounded-md bg-primary-container/20 text-primary font-label-md transition-all">Automático</button>
+<button class="px-4 py-1.5 rounded-md text-text-secondary hover:text-text-primary font-label-md transition-all">Manual</button>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-end gap-gutter-md w-full md:w-auto">
+<button class="px-6 py-3 rounded-xl border border-outline-variant text-text-primary font-label-md hover:bg-bg-surface-hover transition-colors">
+                            Nueva Búsqueda
+                        </button>
+<button class="px-8 py-3 rounded-xl primary-gradient text-white font-label-md font-bold active-glow hover:scale-[1.02] active:scale-95 transition-all shadow-[0_2px_12px_rgba(13,148,136,0.3)]">
+                            Siguiente Paso
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full rounded-t-xl z-50 bg-surface-dim/90 backdrop-blur-lg border-t border-outline-variant flex justify-around items-center h-16 px-gutter-md shadow-[0_-4px_12px_rgba(0,0,0,0.5)]">
+<button class="flex flex-col items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-label-sm text-label-sm">Descubrir</span>
+</button>
+<button class="flex flex-col items-center justify-center text-text-secondary hover:text-primary">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-text-secondary hover:text-primary">
+<span class="material-symbols-outlined" data-icon="chat_bubble">chat_bubble</span>
+<span class="font-label-sm text-label-sm">Chat RAG</span>
+</button>
+</nav>
+<script>
+        function toggleAccordion() {
+            const accordion = document.getElementById('cost-accordion');
+            accordion.classList.toggle('accordion-open');
+        }
+
+        // Chip selection simulation
+        document.querySelectorAll('.social-chip-active').forEach(chip => {
+            chip.addEventListener('click', function() {
+                this.classList.toggle('social-chip-active');
+                if (!this.classList.contains('social-chip-active')) {
+                    this.classList.add('bg-bg-surface', 'text-text-secondary', 'border-transparent');
+                    this.classList.remove('bg-primary-container/15', 'border-primary/50', 'text-primary');
+                } else {
+                    this.classList.remove('bg-bg-surface', 'text-text-secondary', 'border-transparent');
+                    this.classList.add('social-chip-active');
+                }
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,118 @@
+# Plan de Migración a HuggingFace Spaces (ZeroGPU) — ChismesitoGPT v2
+
+Este plan describe el proceso para preparar y desplegar ChismesitoGPT v2 en HuggingFace Spaces utilizando el SDK de Gradio y la infraestructura de ZeroGPU para acelerar el análisis de texto (específicamente la clasificación Zero-Shot con mDeBERTa).
+
+---
+
+## Configuración Requerida en HuggingFace
+
+1. Configuración del Space:
+   - El Space debe ser configurado con el SDK de Gradio y hardware ZeroGPU A100 (gratuito) desde la consola de Hugging Face.
+   - Todas las variables de entorno (SUPABASE_URL, SUPABASE_SERVICE_KEY, GEMINI_API_KEY, etc.) deben configurarse como Secrets en Hugging Face Space Settings.
+   - El archivo .env local NO se debe subir al repositorio de HuggingFace.
+
+2. Compatibilidad Local vs HF:
+   - Para que el proyecto siga corriendo localmente en tu máquina sin problemas, implementaremos un cargador condicional para la librería "spaces" de HuggingFace. De esta forma, si corre local usa la CPU, y si corre en HuggingFace usa la GPU A100 automáticamente.
+
+---
+
+## Cambios Propuestos en los Archivos
+
+### 1. Metadata de la Aplicación (Hugging Face YAML)
+Crearemos el archivo README.md del repositorio con el formato de cabecera YAML requerido por HuggingFace para autodetectar la aplicación Gradio y habilitar los permisos del Space.
+
+README.md:
+```yaml
+---
+title: ChismesitoGPT v2
+emoji: 🕵️
+colorFrom: teal
+colorTo: cyan
+sdk: gradio
+sdk_version: 4.44.0  # Versión compatible
+app_file: app.py
+pinned: false
+license: mit
+---
+```
+
+---
+
+### 2. Aceleración Zero-Shot con ZeroGPU
+Optimizaremos el módulo `tools/zero_shot_tool.py` para cumplir con las directrices de HuggingFace ZeroGPU:
+1. Carga del modelo en CPU al inicio (fuera de la función decorada para evitar cold starts y recargas constantes).
+2. Decoración de la función de inferencia con `@spaces.GPU` (con fallback dinámico si no está en HF).
+3. Optimización de Batching: Modificar la llamada de la pipeline para pasar la lista de textos completa en lugar de procesarlos uno a uno en un bucle 'for'. Esto permite que el modelo use el batch_size=8 configurado y acelere el proceso de clasificación hasta 10 veces en GPU.
+
+Cambios propuestos en zero_shot_tool.py:
+- Importar condicionalmente `spaces`.
+- Mover el modelo a `cuda` dentro del bloque GPU y regresarlo a `cpu` para liberar la GPU compartida de HF.
+- Cambiar la inferencia por lotes (batch processing).
+
+---
+
+### 3. Ajuste de Dependencias y Modelos (spaCy / PySentimiento)
+En un HuggingFace Space no tenemos acceso interactivo para ejecutar comandos de instalación como `python -m spacy download` tras el despliegue. HuggingFace instala dependencias únicamente leyendo `requirements.txt`.
+
+Para solucionar esto, aplicamos las siguientes estrategias:
+
+*   **Modelo de spaCy (`es_core_news_md`):**
+    En lugar de usar un comando, declaramos la descarga directa de la versión del modelo en el archivo `requirements.txt` utilizando el enlace del release en GitHub de la siguiente forma:
+    ```text
+    es_core_news_md @ https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.7.0/es_core_news_md-3.7.0.tar.gz
+    ```
+    HuggingFace instalará el modelo como una dependencia de python normal de forma completamente automatizada durante el build.
+
+*   **Modelos de PySentimiento y Transformers:**
+    Los modelos de Hugging Face (como `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` y los analizadores de PySentimiento) se auto-descargan desde el Hub de Hugging Face la primera vez que se cargan en la app. Al estar corriendo en la infraestructura de HuggingFace, esta descarga es instantánea y se almacena en el cache temporal del contenedor de forma transparente, sin necesidad de comandos manuales.
+
+Cambios propuestos en requirements.txt:
+- Añadir la línea del modelo de spaCy: `es_core_news_md @ https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.7.0/es_core_news_md-3.7.0.tar.gz`
+- Añadir `spaces` (opcional en local, se instala en HF para habilitar el decorador GPU).
+
+---
+
+### 4. Detección automática de Ambiente (Local vs HuggingFace Spaces)
+Para que el código se comporte de manera óptima en cada entorno, agregaremos una detección automática.
+
+HuggingFace define la variable de entorno `SPACE_ID` (con formato `usuario/nombre-del-space`) de forma predeterminada en todos sus contenedores.
+
+*   **Configuración en `config.py`:**
+    Agregaremos la bandera `IS_SPACES` para que cualquier parte de la app sepa dónde está corriendo:
+    ```python
+    # Detección de HuggingFace Spaces
+    IS_SPACES = "SPACE_ID" in os.environ
+    ```
+
+*   **Estrategia de Carga de API Keys:**
+    - **Local:** `config.py` ejecuta `load_dotenv()`, cargando las variables locales del archivo `.env`.
+    - **HuggingFace:** `load_dotenv()` no encontrará el archivo `.env` (ya que está en `.gitignore`), fallará de forma silenciosa y `os.getenv` tomará automáticamente los **Secrets** del sistema que configuramos en los Settings del Space.
+
+---
+
+## Plan de Verificación y Despliegue Paso a Paso
+
+### Paso 1: Inicialización en HuggingFace
+1. Ve a huggingface.co/new-space.
+2. Nombra tu Space (ej. chismesitogpt).
+3. Selecciona SDK: Gradio.
+4. En Space Hardware, selecciona ZeroGPU (A100).
+5. Crea el Space.
+
+### Paso 2: Configuración de Variables (Secrets)
+Ve a Settings de tu Space en HuggingFace, y bajo Variables and Secrets, agrega:
+- GEMINI_API_KEY
+- SERPAPI_API_KEY
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_KEY
+- ALLOWED_EMAILS (Separados por coma)
+- Cualquier otra API key que uses (YouTube, Reddit, APIFY, etc.).
+
+### Paso 3: Subir Código
+Clona el repositorio de HuggingFace localmente usando Git LFS y copia todos los archivos del proyecto (excepto .env y .venv), luego haz commit y push:
+```bash
+git add .
+git commit -m "Deployment to HuggingFace Space with ZeroGPU"
+git push origin main
+```

@@ -1,0 +1,273 @@
+# Mejoras Sugeridas — ChismesitoGPT v2
+
+---
+
+## 1. Sistema de Login (Usuario + Contraseña)
+
+### Opción A: Supabase Auth (recomendada)
+
+**Ventajas**: Ya tienes Supabase. Auth viene incluido. RLS se activa con `auth.uid()` real.
+
+**Implementación**:
+
+1. Activar Supabase Auth en Dashboard → Authentication → Providers → Email
+
+2. Agregar página de login en Gradio:
+```python
+# ui/auth.py
+def auth_page():
+    with gr.Column():
+        email = gr.Textbox(label="Email")
+        password = gr.Textbox(label="Password", type="password")
+        login_btn = gr.Button("Ingresar")
+        signup_btn = gr.Button("Registrarse")
+        status = gr.Markdown()
+        return email, password, login_btn, signup_btn, status
+
+def handle_login(email, password):
+    from supabase import create_client
+    client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    try:
+        resp = client.auth.sign_in_with_password({"email": email, "password": password})
+        return resp.session.access_token, resp.user.id
+    except Exception as e:
+        return None, str(e)
+```
+
+3. Pasar `user_id` real (UUID de Supabase) en vez de `"00000000-..."`
+```python
+state.user_id = user.id  # UUID real de auth.users
+```
+
+4. Activar RLS para producción:
+```sql
+ALTER TABLE chismesito_gpt.unified_comments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_own_data" ON chismesito_gpt.unified_comments
+    FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+```
+
+5. El `SUPABASE_SERVICE_KEY` en backend para inserts, `SUPABASE_ANON_KEY` para login en frontend.
+
+**Esfuerzo**: 2-3 horas.
+
+### Opción B: Django Auth (si migras a Django)
+
+Si decides migrar a Django + React, usa `django-allauth` o JWT con `djangorestframework-simplejwt`. Esto ya está cubierto en `migration_plan_v3_react_django.md`.
+
+---
+
+## 2. Calculadora de Tokens y Costo APIFY
+
+### 2a. Contador de tokens (Gemini / Claude / DeepSeek)
+
+Cada llamada al LLM consume tokens. Necesitas medir:
+
+| Momento | ¿Qué se mide? |
+|---------|---------------|
+| Generar categorías | Tokens in (muestra 20%) + tokens out (lista Python) |
+| Chat RAG | Tokens in (contexto + prompt) + tokens out (respuesta) |
+
+**Implementación en `llm_manager.py`**:
+
+```python
+import tiktoken  # pip install tiktoken
+
+TOKEN_USAGE = {"input": 0, "output": 0, "calls": 0}
+
+def count_tokens(text: str, model: str = "gpt-4") -> int:
+    """Estima tokens con tiktoken (funciona para OpenAI/DeepSeek)."""
+    try:
+        enc = tiktoken.encoding_for_model(model)
+        return len(enc.encode(text))
+    except:
+        return len(text) // 4  # Fallback: ~4 chars por token
+
+def get_llm_response_with_meter(prompt, model, system_prompt=None):
+    t_in = count_tokens(prompt) + count_tokens(system_prompt or "")
+    TOKEN_USAGE["input"] += t_in
+    
+    response = get_llm_response(prompt, model, system_prompt)
+    
+    t_out = count_tokens(response)
+    TOKEN_USAGE["output"] += t_out
+    TOKEN_USAGE["calls"] += 1
+    return response
+```
+
+**Mostrar en UI** — agrega un componente en Gradio:
+
+```python
+with gr.Accordion("💰 Calculadora de Costos", open=False):
+    token_usage = gr.Markdown("Tokens: 0 in / 0 out | Llamadas: 0 | Costo: $0.00")
+```
+
+Actualízalo después de cada búsqueda y cada chat:
+
+```python
+def _update_cost_display():
+    total = (TOKEN_USAGE["input"] * PRICE_IN + TOKEN_USAGE["output"] * PRICE_OUT) / 1_000_000
+    return f"Tokens: {TOKEN_USAGE['input']:,} in / {TOKEN_USAGE['output']:,} out | Llamadas: {TOKEN_USAGE['calls']} | Costo: ${total:.4f}"
+```
+
+**Precios por modelo (USD/1M tokens)**:
+
+| Modelo | Input | Output |
+|--------|-------|--------|
+| Gemini 2.0 Flash Lite | $0 | $0 (free tier) |
+| Gemini 2.0 Flash | $0.10 | $0.40 |
+| Gemini 2.5 Flash | $0.15 | $0.60 |
+| Claude Haiku 4.5 | $1.00 | $5.00 |
+| Claude Sonnet 4.6 | $3.00 | $15.00 |
+| DeepSeek V4 Flash | $0.14 | $0.28 |
+| DeepSeek V4 Pro | $0.435 | $0.87 |
+
+¿Usar una API generalista?
+
+### 2b. Contador de uso APIFY
+
+APIFY cobra por actor run. Cada llamada a `_run_actor()` consume créditos.
+
+**Implementación**:
+
+```python
+APIFY_USAGE = {"runs": 0, "actors_used": set()}
+
+def _run_actor_with_meter(actor_id, input_data, timeout=180):
+    APIFY_USAGE["runs"] += 1
+    APIFY_USAGE["actors_used"].add(actor_id)
+    # ... existing _run_actor code ...
+```
+
+Tu plan APIFY ($29/mes) incluye ~100 actor runs y ~$5 en créditos de computación. Mostrar:
+
+```
+APIFY: 12 runs (3 actors) | Plan: $29/mes | Uso estimado: $3.48
+```
+
+---
+
+## 3. Mejorar Zero-Shot Classification
+
+### Problema actual
+
+BART-large-mnli es lento (~2s por comentario en CPU) y moderadamente preciso. Para 20 comentarios = 40 segundos.
+
+### Opción A: Modelo más rápido (recomendado)
+
+Cambiar a **DeBERTa-v3-base-mnli** (más rápido y preciso):
+
+```python
+# tools/zero_shot_tool.py
+_classifier = None
+
+def _get_classifier():
+    global _classifier
+    if _classifier is None:
+        from transformers import pipeline
+        _classifier = pipeline(
+            "zero-shot-classification",
+            model="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",  # ~40% más rápido
+            device=-1  # CPU
+        )
+    return _classifier
+```
+
+**Comparativa (CPU, ~100 tokens)**:
+
+| Modelo | Tiempo/comentario | Precisión | Tamaño |
+|--------|------------------|-----------|--------|
+| BART-large-mnli | ~2.0s | 88% | 1.6 GB |
+| DeBERTa-v3-base (multilingual) | ~1.2s | 91% | 700 MB |
+| DeBERTa-v3-xsmall | ~0.3s | 85% | 140 MB |
+
+**Recomendación**: `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli` si el texto está en inglés. Para español: `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` (multilingual).
+
+### Opción B: Usar el LLM para clasificar (más lento pero más preciso)
+
+En vez de zero-shot, pide al LLM que clasifique TODOS los comentarios de una vez:
+
+```python
+def classify_with_llm(comments: list[str], categories: list[str], model: str) -> list[str]:
+    prompt = f"""Clasifica CADA uno de los siguientes comentarios en UNA de estas categorias:
+{categories}
+
+Por cada comentario, responde SOLO con la categoria. Un comentario por linea.
+
+Comentarios:
+""" + "\n".join(f"{i}. {c}" for i, c in enumerate(comments))
+
+    response = get_llm_response(prompt=prompt, model=model)
+    return [line.strip() for line in response.strip().split("\n") if line.strip()]
+```
+
+Ventaja: más preciso. Desventaja: usa tokens del LLM (costo), ~3s para lote de 20.
+
+### Opción C: Batch processing
+
+Procesar zero-shot en lotes con `pipeline(..., batch_size=8)`:
+
+```python
+_classifier = pipeline(
+    "zero-shot-classification",
+    model="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+    device=-1,
+    batch_size=8  # Procesa 8 comentarios a la vez
+)
+results = _classifier(comments, candidate_labels, batch_size=8)
+```
+
+Reduce tiempo total ~60%.
+
+### Recomendación final
+
+| Prioridad | Cambio | Ahorro |
+|-----------|--------|--------|
+| Alta | DeBERTa-v3 en vez de BART | -40% tiempo |
+| Media | Batch size = 8 | -60% tiempo adicional |
+| Baja | LLM como clasificador | Solo si necesitas máxima precisión |
+
+---
+### Opción D: Zero Shot alternativo
+De manera nativa que use facebook/bart-large-mnli 
+Pero si el porcentaje de confianza no es mayor a 0.8
+Usar  MoritzLaurer/mDeBERTa-v3-base-mnli-xnli y si este no tiene 
+un porcentaje mayor
+Entonces que quede como "Otros" 
+¿O usar un modelo pequeño?
+
+### Opción C: Zero Shot alternativo
+Para menos de 100 comentarios usar la categorización con LLM o con Gemma 
+usando https://mlverse.github.io/mall/
+
+
+
+## 4. Priorización
+
+| Mejora | Esfuerzo | Impacto | Sugerencia |
+|--------|---------|---------|-----------|
+| Login (Supabase Auth) | 2-3h | Alto | Hacer primero |
+| Calculadora tokens | 1-2h | Medio | Útil para demo/cotización |
+| Calculadora APIFY | 30min | Bajo | Simple de agregar |
+| Zero-shot DeBERTa | 30min | Alto | Cambio de 1 línea |
+| Zero-shot batch | 10min | Medio | Agregar `batch_size=8` |
+| LLM classifier | 2h | Medio | Opcional |
+
+---
+
+## 5. Próximos pasos
+
+1. Activar Supabase Auth en el dashboard → probar login
+2. Instalar `tiktoken` → agregar contador en `llm_manager.py`
+3. Cambiar `facebook/bart-large-mnli` por `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli` en `tools/zero_shot_tool.py`
+4. Agregar `batch_size=8` al pipeline
+
+## 6 Evaluar SMTP para gmail
+
+
+
+¿Quizás implementar aprendizaje por refuerzo?
+
+
+
+Por alguna razón no genera todos los comentarios solicitados
+Testear las apps en Apify en google colab

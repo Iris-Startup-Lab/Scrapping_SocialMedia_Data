@@ -1,0 +1,91 @@
+La lógica de los demás scrapers de Apify tanto x como instagram y tiktok sigue el mismo estándar?
+1 El usuario pregunta sobre un tema ejemp "¿Cuáles son los comentarios de banco azteca?"
+2 Dependiendo la red, busca, videos de yotube del tema en yt o lugares en maps o post en instagram etc
+3 Se generar los comentarios de las personas de los posts/videos/imágenes
+4 Se analizan y se categorizan
+5 El usuario puede preguntar al chatbot
+
+
+Youtube 
+pasó primeras pruebas
+Google Maps
+pasó primeras pruebas
+Reddit 
+pasó primeras pruebas
+facebook
+instagram
+tiktok
+twitter
+playstore
+
+
+
+
+
+
+-- ══════════════════════════════════════════════
+-- PASO 1: Agregar FK real a auth.users
+-- (solo si aún no lo tienes, el schema actual NO la tiene)
+-- ══════════════════════════════════════════════
+ALTER TABLE chismesito_gpt.unified_comments
+    ADD CONSTRAINT fk_user_id
+    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+ALTER TABLE chismesito_gpt.chat_history
+    ADD CONSTRAINT fk_chat_user_id
+    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- ══════════════════════════════════════════════
+-- PASO 2: Habilitar RLS
+-- ══════════════════════════════════════════════
+ALTER TABLE chismesito_gpt.unified_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chismesito_gpt.chat_history ENABLE ROW LEVEL SECURITY;
+
+-- ══════════════════════════════════════════════
+-- PASO 3: Policies (granulares, NO FOR ALL)
+-- ══════════════════════════════════════════════
+
+-- unified_comments: solo leer los propios
+CREATE POLICY "user_select_own_comments"
+    ON chismesito_gpt.unified_comments
+    FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- unified_comments: solo insertar con user_id propio
+CREATE POLICY "user_insert_own_comments"
+    ON chismesito_gpt.unified_comments
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+-- chat_history: solo leer los propios
+CREATE POLICY "user_select_own_chat"
+    ON chismesito_gpt.chat_history
+    FOR SELECT
+    USING (auth.uid() = user_id);
+
+-- chat_history: solo insertar con user_id propio
+CREATE POLICY "user_insert_own_chat"
+    ON chismesito_gpt.chat_history
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+-- ══════════════════════════════════════════════
+-- PASO 4: Nueva tabla — login_attempts (rate limiting)
+-- ══════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS chismesito_gpt.login_attempts (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email       TEXT NOT NULL,
+    success     BOOLEAN NOT NULL DEFAULT FALSE,
+    attempted_at TIMESTAMPTZ DEFAULT NOW(),
+    ip_address  TEXT
+);
+
+CREATE INDEX idx_login_email_time
+    ON chismesito_gpt.login_attempts(email, attempted_at);
+
+-- Esta tabla la escribe el backend (service_key), no necesita RLS
+-- pero sí la protegemos de lectura pública
+ALTER TABLE chismesito_gpt.login_attempts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "deny_all_public"
+    ON chismesito_gpt.login_attempts
+    FOR ALL TO anon USING (false);

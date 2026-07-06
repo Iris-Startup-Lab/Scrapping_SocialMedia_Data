@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ChismesitoGPT v2 - Dashboard de Análisis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "inverse-primary": "#006a61",
+                "secondary-fixed-dim": "#6cd3f7",
+                "border-active": "rgba(13,148,136,0.5)",
+                "primary": "#6bd8cb",
+                "sentiment-negative": "#f87171",
+                "sentiment-positive": "#10b981",
+                "outline": "#879391",
+                "tertiary": "#4ddcc6",
+                "on-secondary-fixed-variant": "#004e61",
+                "primary-fixed-dim": "#6bd8cb",
+                "bg-surface": "rgba(255,255,255,0.04)",
+                "on-secondary-fixed": "#001f28",
+                "sentiment-neutral": "#94a3b8",
+                "on-primary": "#003732",
+                "on-tertiary": "#003730",
+                "bg-base": "#0d1117",
+                "on-primary-fixed-variant": "#005049",
+                "secondary-fixed": "#b7eaff",
+                "text-primary": "#e6edf3",
+                "error-container": "#93000a",
+                "outline-variant": "#3d4947",
+                "secondary": "#6cd3f7",
+                "surface-container-highest": "#31353c",
+                "on-secondary-container": "#002e3b",
+                "surface-container-low": "#181c22",
+                "surface-variant": "#31353c",
+                "tertiary-fixed": "#6ef9e2",
+                "text-secondary": "rgba(255,255,255,0.55)",
+                "on-secondary": "#003543",
+                "deepseek-blue": "#5B8DEF",
+                "inverse-surface": "#dfe2eb",
+                "claude-orange": "#D97757",
+                "on-tertiary-fixed": "#00201b",
+                "surface-dim": "#10141a",
+                "bg-surface-hover": "rgba(255,255,255,0.08)",
+                "tertiary-container": "#00a391",
+                "on-tertiary-fixed-variant": "#005047",
+                "surface-bright": "#353940",
+                "on-error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#4ddcc6",
+                "openai-green": "#74AA9C",
+                "text-muted": "rgba(255,255,255,0.35)",
+                "primary-container": "#29a195",
+                "background": "#10141a",
+                "primary-fixed": "#89f5e7",
+                "on-surface": "#dfe2eb",
+                "surface-container-high": "#262a31",
+                "surface-container-lowest": "#0a0e14",
+                "border-subtle": "rgba(255,255,255,0.10)",
+                "surface-tint": "#6bd8cb",
+                "surface": "#10141a",
+                "on-surface-variant": "#bcc9c6",
+                "gemini-blue": "#4285F4",
+                "error": "#ffb4ab",
+                "on-error": "#690005",
+                "secondary-container": "#269dbe",
+                "surface-container": "#1c2026",
+                "on-primary-fixed": "#00201d",
+                "on-background": "#dfe2eb",
+                "on-tertiary-container": "#00302a",
+                "inverse-on-surface": "#2d3137",
+                "on-primary-container": "#00302b"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "stack-gap": "1.5rem",
+                "section-padding": "1.5rem",
+                "container-margin": "2rem",
+                "gutter-md": "1rem",
+                "gutter-sm": "0.625rem"
+            },
+            "fontFamily": {
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"],
+                "headline-xl-mobile": ["Inter"],
+                "headline-lg": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-xl": ["Inter"],
+                "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                "body-md": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                "body-lg": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "headline-xl-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                "headline-lg": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "headline-xl": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+        }
+
+        .sentiment-card {
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .sentiment-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chat-bubble-bot {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px 12px 12px 0px;
+        }
+
+        .chat-bubble-user {
+            background: rgba(13, 148, 136, 0.18);
+            border-radius: 12px 12px 0px 12px;
+            border: 1px solid rgba(13, 148, 136, 0.3);
+        }
+
+        .teal-glow {
+            box-shadow: 0 0 15px rgba(13, 216, 203, 0.1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #10141a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #31353c;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3d4947;
+        }
+
+        /* Material Icon Alignment */
+        .material-symbols-outlined {
+            vertical-align: middle;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="bg-base min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant flex justify-between items-center px-section-padding h-16 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-8">
+<span class="font-headline-lg text-headline-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">ChismesitoGPT v2</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-muted">search</span>
+<input class="bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-1.5 text-body-md focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none w-64" placeholder="Search insights..." type="text"/>
+</div>
+<button class="text-text-secondary hover:bg-bg-surface-hover p-2 rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-text-secondary hover:bg-bg-surface-hover p-2 rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Progress Stepper / Tab Bar -->
+<div class="fixed top-16 w-full z-40 bg-surface-container-low/95 backdrop-blur-xl border-b border-outline-variant px-section-padding py-3 flex justify-center items-center">
+<div class="flex items-center space-x-2 md:space-x-4 max-w-4xl w-full">
+<!-- Step 1: Input (Completed) -->
+<div class="flex flex-col items-center flex-1 cursor-pointer group">
+<div class="flex items-center justify-center w-full">
+<div class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold shadow-[0_0_10px_rgba(107,216,203,0.5)] z-10 transition-transform group-hover:scale-110">
+<span class="material-symbols-outlined text-[18px]">check</span>
+</div>
+<div class="flex-1 h-1 mx-2 bg-primary/50 relative overflow-hidden rounded-full">
+<div class="absolute top-0 left-0 h-full w-full bg-primary"></div>
+</div>
+</div>
+<span class="mt-2 text-label-md font-label-md text-primary hidden md:block text-center">1. Input Configuration</span>
+</div>
+<!-- Step 2: Dashboard (Active) -->
+<div class="flex flex-col items-center flex-1 cursor-pointer group">
+<div class="flex items-center justify-center w-full">
+<div class="flex-1 h-1 mx-2 bg-primary/50 relative overflow-hidden rounded-full md:hidden">
+<div class="absolute top-0 left-0 h-full w-full bg-primary"></div>
+</div>
+<div class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold shadow-[0_0_15px_rgba(107,216,203,0.8)] z-10 ring-4 ring-primary/30 transition-transform group-hover:scale-110">
+                            2
+                        </div>
+<div class="flex-1 h-1 mx-2 bg-outline-variant relative overflow-hidden rounded-full"></div>
+</div>
+<span class="mt-2 text-label-md font-label-md text-primary font-bold hidden md:block text-center">2. Analysis Dashboard</span>
+</div>
+<!-- Step 3: Chat (Pending) -->
+<div class="flex flex-col items-center flex-1 cursor-not-allowed opacity-50">
+<div class="flex items-center justify-center w-full">
+<div class="flex-1 h-1 mx-2 bg-outline-variant relative overflow-hidden rounded-full md:hidden"></div>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest flex items-center justify-center text-text-muted font-bold border border-outline-variant z-10">
+                            3
+                        </div>
+</div>
+<span class="mt-2 text-label-md font-label-md text-text-muted hidden md:block text-center">3. Deep Dive Chat</span>
+</div>
+</div>
+</div>
+<!-- Sidebar (Optional Desktop Anchor) -->
+<aside class="fixed left-0 top-0 h-full w-64 z-30 bg-surface-container-low/95 backdrop-blur-xl border-r border-outline-variant hidden lg:flex flex-col py-stack-gap shadow-sm mt-[120px]">
+<div class="px-6 mb-6">
+<button class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary font-label-md text-label-md py-3 rounded-xl font-bold shadow-[0_2px_12px_rgba(13,148,136,0.3)] transition-transform active:scale-95">
+                New Analysis
+            </button>
+</div>
+<div class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary transition-all font-label-md text-label-md rounded-lg mx-2" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+                Home
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container/20 text-primary border-r-4 border-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                Analysis
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary transition-all font-label-md text-label-md rounded-lg mx-2" href="#">
+<span class="material-symbols-outlined">explore</span>
+                Manual Discovery
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary transition-all font-label-md text-label-md rounded-lg mx-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+<div class="mt-auto px-4 border-t border-outline-variant pt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-text-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-text-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">description</span>
+                Documentation
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 lg:ml-64 pt-[140px] pb-24 px-section-padding space-y-stack-gap">
+<!-- Quick Stats Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-gutter-md">
+<!-- Reddit Stat -->
+<div class="glass-panel p-4 flex items-center justify-between sentiment-card">
+<div>
+<p class="text-text-secondary text-label-sm font-label-sm uppercase tracking-wider mb-1">Reddit Threads</p>
+<h3 class="text-headline-lg font-headline-lg text-primary">1,284</h3>
+</div>
+<div class="w-12 h-12 rounded-full bg-[#FF4500]/10 flex items-center justify-center text-[#FF4500]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">forum</span>
+</div>
+</div>
+<!-- Instagram Stat -->
+<div class="glass-panel p-4 flex items-center justify-between sentiment-card">
+<div>
+<p class="text-text-secondary text-label-sm font-label-sm uppercase tracking-wider mb-1">IG Mentions</p>
+<h3 class="text-headline-lg font-headline-lg text-secondary">842</h3>
+</div>
+<div class="w-12 h-12 rounded-full bg-[#E1306C]/10 flex items-center justify-center text-[#E1306C]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+</div>
+</div>
+<!-- Twitter/X Stat -->
+<div class="glass-panel p-4 flex items-center justify-between sentiment-card">
+<div>
+<p class="text-text-secondary text-label-sm font-label-sm uppercase tracking-wider mb-1">X Interactions</p>
+<h3 class="text-headline-lg font-headline-lg text-tertiary">3,912</h3>
+</div>
+<div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-text-primary">
+<span class="material-symbols-outlined">alternate_email</span>
+</div>
+</div>
+<!-- Overall Sentiment -->
+<div class="glass-panel p-4 flex items-center justify-between sentiment-card border-l-4 border-sentiment-positive">
+<div>
+<p class="text-text-secondary text-label-sm font-label-sm uppercase tracking-wider mb-1">Net Sentiment</p>
+<h3 class="text-headline-lg font-headline-lg text-sentiment-positive">+68%</h3>
+</div>
+<div class="w-12 h-12 rounded-full bg-sentiment-positive/10 flex items-center justify-center text-sentiment-positive">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+</div>
+</div>
+<!-- Bento Grid Charts -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter-md">
+<!-- Sentiment Over Time (Main Focus) -->
+<div class="glass-panel p-6 md:col-span-8 h-[400px] flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline-lg text-headline-lg">Sentiment Distribution</h4>
+<div class="flex gap-2">
+<span class="px-3 py-1 rounded-full bg-surface-container-high text-label-sm font-label-sm text-text-secondary cursor-pointer hover:text-primary border border-outline-variant">7 Days</span>
+<span class="px-3 py-1 rounded-full bg-primary/20 text-label-sm font-label-sm text-primary border border-primary/40">30 Days</span>
+</div>
+</div>
+<div class="flex-1 w-full" id="sentimentChart"></div>
+</div>
+<!-- Emotion Analysis -->
+<div class="glass-panel p-6 md:col-span-4 h-[400px] flex flex-col">
+<h4 class="font-headline-lg text-headline-lg mb-6">Emotion Pulse</h4>
+<div class="flex-1 w-full" id="emotionChart"></div>
+</div>
+<!-- Review Map (Geospatial) -->
+<div class="glass-panel p-6 md:col-span-12 lg:col-span-7 h-[450px] flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline-lg text-headline-lg">Geographic Hotspots</h4>
+<div class="text-text-secondary text-label-md font-label-md flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span> High Density
+                    </div>
+</div>
+<div class="flex-1 relative rounded-xl overflow-hidden group">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="A dark-themed global heat map visualization showing vibrant teal and cyan hotspots concentrated in major urban areas. The map uses a minimalist aesthetic with deep charcoal landmasses and glowing data points, perfectly aligned with the corporate modern glassmorphism UI style of the analytical dashboard. Light glows emanate from the most active regions." data-location="Global Map" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAFib1kBdLSMchwd19QPnc95U86LL5YrvCIk15SsghQhU6aAwQJbGXH43CEKQABTwwVVH6WILQpZxQn2oATcKrC8m4Np2OjmfSJlZ0bGnSR5BJXIpFibdwmeajKZqOdexlRO4MPjz5jFPqWWwR-zylnFEJtzMK7nAarFMnRgFwJVjObC2RFMdKsYPScs4KvlsTgY4qQF_LWUuC3XRzt8_r2Ia3na6fPLjhXOQ6tPVU5Bfz1GA3REtGclIUKZJG-_9MtedV6abteIawt')">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent pointer-events-none"></div>
+<!-- Overlay Mock Labels -->
+<div class="absolute top-4 left-4 p-3 glass-panel text-label-sm font-label-sm flex flex-col gap-1">
+<span class="text-primary">New York: +42% Engagement</span>
+<span class="text-secondary">Mexico City: High Sentiment</span>
+<span class="text-tertiary">London: Trend Spike</span>
+</div>
+</div>
+</div>
+<!-- Top 10 Categories -->
+<div class="glass-panel p-6 md:col-span-12 lg:col-span-5 h-[450px] flex flex-col">
+<h4 class="font-headline-lg text-headline-lg mb-6">Key Discussion Pillars</h4>
+<div class="flex-1 w-full" id="categoriesChart"></div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 w-full rounded-t-xl z-50 md:hidden bg-surface-dim/90 backdrop-blur-lg border-t border-outline-variant shadow-[0_-4px_12px_rgba(0,0,0,0.5)] flex justify-around items-center h-16 px-gutter-md">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 scale-110 duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-label-sm text-label-sm">Data</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-sm text-label-sm">Chat</span>
+</a>
+</nav>
+<script>
+        // Data Visualizations Initialization
+        const sentimentColors = ['#10b981', '#f87171', '#94a3b8']; // Positive, Negative, Neutral
+
+        // Sentiment Bar Chart
+        const sentimentTrace = {
+            x: ['Positive', 'Negative', 'Neutral'],
+            y: [550, 120, 310],
+            type: 'bar',
+            marker: {
+                color: sentimentColors,
+                opacity: 0.8
+            },
+            width: 0.6
+        };
+
+        const sentimentLayout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#dfe2eb', family: 'Inter' },
+            margin: { t: 10, b: 40, l: 40, r: 10 },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false },
+            xaxis: { zeroline: false }
+        };
+
+        Plotly.newPlot('sentimentChart', [sentimentTrace], sentimentLayout, {responsive: true, displayModeBar: false});
+
+        // Emotion Pulse (Radar Chart)
+        const emotionData = [{
+            type: 'scatterpolar',
+            r: [80, 45, 20, 30, 60],
+            theta: ['Joy', 'Anger', 'Sadness', 'Fear', 'Surprise'],
+            fill: 'toself',
+            fillcolor: 'rgba(107, 216, 203, 0.2)',
+            line: { color: '#6bd8cb' }
+        }];
+
+        const emotionLayout = {
+            polar: {
+                radialaxis: { visible: false },
+                angularaxis: { color: '#dfe2eb' },
+                bgcolor: 'rgba(0,0,0,0)'
+            },
+            showlegend: false,
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { t: 20, b: 20, l: 20, r: 20 }
+        };
+
+        Plotly.newPlot('emotionChart', emotionData, emotionLayout, {responsive: true, displayModeBar: false});
+
+        // Categories Horizontal Bar Chart
+        const categoryTrace = {
+            y: ['Pricing', 'User Interface', 'API Specs', 'Mobile App', 'Security', 'Performance', 'Support', 'Onboarding', 'Documentation', 'Integrations'],
+            x: [92, 88, 76, 71, 65, 62, 58, 45, 40, 38],
+            type: 'bar',
+            orientation: 'h',
+            marker: {
+                color: '#6cd3f7',
+                opacity: 0.8
+            }
+        };
+
+        const categoryLayout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#dfe2eb', family: 'Inter' },
+            margin: { t: 10, b: 40, l: 120, r: 20 },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.05)' },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }
+        };
+
+        Plotly.newPlot('categoriesChart', [categoryTrace], categoryLayout, {responsive: true, displayModeBar: false});
+    </script>
+</body></html>

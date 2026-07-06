@@ -1,0 +1,319 @@
+Apify 
+
+Red social 
+TikTok
+Cliente 
+clockworks/tiktok-hashtag-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "hashtags": ["followforfollowback"],
+    "resultsPerPage": 100,
+    "shouldDownloadVideos": False,
+    "shouldDownloadCovers": False,
+    "downloadSubtitlesOptions": "NEVER_DOWNLOAD_SUBTITLES",
+    "shouldDownloadSlideshowImages": False,
+    "videoKvStoreIdOrName": "tiktok-videos",
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("f1ZeP0K58iwlqG2pY").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+
+
+Red social 
+TikTok
+
+Cliente 
+clockworks/tiktok-comments-scraper
+
+Método 
+
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "postURLs": ["https://www.tiktok.com/@looooooooch/video/7332342275151760642"],
+    "commentsPerPost": 100,
+    "topLevelCommentsPerPost": None,
+    "maxRepliesPerComment": 0,
+    "profiles": None,
+    "resultsPerPage": 100,
+    "profileScrapeSections": ["videos"],
+    "profileSorting": "latest",
+    "oldestPostDateUnified": None,
+    "newestPostDate": None,
+    "excludePinnedPosts": False,
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("BDec00yAmCm1QbMEI").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+Red social 
+X
+
+Cliente 
+watcher.data/search-x-by-keywords
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "searchType": "tweets",
+    "keywords": [
+        "#AI",
+        "Python",
+    ],
+    "maxItemsPerKeyword": 50,
+    "sortBy": "latest",
+    "outputFormat": "json",
+    "proxyConfiguration": { "useApifyProxy": False },
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("8CiMefkv2yLlD7vYl").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+
+
+Red social 
+X
+
+Cliente 
+scraper_one/x-post-replies-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "postUrls": [
+        "https://x.com/ZippoJeje/status/1905584213761351970",
+        "https://x.com/iFlame__/status/1904188777913856280",
+    ],
+    "resultsLimit": 20,
+    "includeOriginalPost": None,
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("qhybbvlFivx7AP0Oh").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+
+
+
+
+Red social 
+Instagram
+
+Cliente 
+apify/instagram-hashtag-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "hashtags": ["webscraping"],
+    "resultsType": "posts",
+    "resultsLimit": 20,
+    "keywordSearch": None,
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("reGe1ST3OBgYZSsZJ").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+
+
+
+Red social 
+Instagram
+
+Cliente 
+apify/instagram-post-scraper
+
+Método 
+
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "username": [
+        "natgeo",
+        "https://www.instagram.com/natgeo/",
+        "https://www.instagram.com/p/DLNsnpUTdVS/",
+    ],
+    "resultsLimit": 20,
+    "skipPinnedPosts": False,
+    "onlyPostsNewerThan": None,
+    "dataDetailLevel": "basicData",
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("nH2AHrwxeTRJoN5hX").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+
+
+Red social 
+Instagram
+
+Cliente 
+apify/instagram-comment-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "directUrls": [
+        "https://www.instagram.com/p/DN8-GjPkgjS",
+        "https://www.instagram.com/reel/DDIJAfeyemG",
+    ],
+    "resultsLimit": 15,
+    "includeNestedComments": None,
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("SbK00X0JYCPblD2wp").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+Red social 
+Facebook
+
+Cliente 
+apify/facebook-search-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "categories": ["Pub"],
+    "locations": [],
+    "resultsLimit": 20,
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("Us34x9p7VgjCz99H6").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+Red social 
+Facebook
+
+Cliente 
+apify/facebook-posts-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "startUrls": [{ "url": "https://www.facebook.com/humansofnewyork/" }],
+    "resultsLimit": 20,
+    "captionText": False,
+    "onlyPostsNewerThan": "2024-01-01",
+    "onlyPostsOlderThan": "2024-12-31",
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("KoJrdxJCTtpon81KY").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)
+
+
+Red social 
+Facebook
+
+Cliente 
+apify/facebook-comments-scraper
+
+Método 
+from apify_client import ApifyClient
+
+# Initialize the ApifyClient with your API token
+client = ApifyClient("<YOUR_API_TOKEN>")
+
+# Prepare the Actor input
+run_input = {
+    "startUrls": [{ "url": "https://www.facebook.com/humansofnewyork/posts/pfbid0BbKbkisExKGSKuhee9a7i86RwRuMKFC8NSkKStB7CsM3uXJuAAfZLrkcJMXxhH4Yl" }],
+    "resultsLimit": 50,
+    "includeNestedComments": False,
+    "viewOption": "RANKED_UNFILTERED",
+    "onlyCommentsNewerThan": "2024-01-01",
+}
+
+# Run the Actor and wait for it to finish
+run = client.actor("us5srxAYnsrkgUv2v").call(run_input=run_input)
+
+# Fetch and print Actor results from the run's dataset (if there are any)
+for item in client.dataset(run["defaultDatasetId"]).iterate_items():
+    print(item)

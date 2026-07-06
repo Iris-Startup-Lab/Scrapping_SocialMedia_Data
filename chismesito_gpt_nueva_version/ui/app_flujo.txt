@@ -1,0 +1,322 @@
+﻿====================================================================
+  ChismesitoGPT v2 — Descripcion del Flujo de la App (paso a paso)
+====================================================================
+Archivo: ui/app_flujo.txt
+Ultima actualizacion: 2026-07-06
+====================================================================
+
+DESCRIPCION GENERAL
+-------------------
+ChismesitoGPT es una app Gradio que permite al usuario investigar
+opiniones y comentarios de redes sociales sobre cualquier tema.
+El usuario escribe un prompt, elige plataformas, y el sistema busca,
+extrae, analiza (sentimiento / emocion / categoria) y presenta los
+resultados en un dashboard interactivo con chat RAG.
+
+
+====================================================================
+PASO 1 — PANTALLA DE LOGIN
+====================================================================
+Lo que ve el usuario:
+  - Logo de ChismesitoGPT
+  - Campo: Email
+  - Campo: Password
+  - Boton: "Iniciar sesion"
+  - Texto de estado (mensajes de error o exito)
+
+Lo que pasa internamente (auth/supabase_auth.py):
+  1. Se verifica que el email exista en chismesito_gpt.allowed_users
+     y que active = TRUE (whitelist manual).
+  2. Se llama a Supabase Auth con email + password.
+  3. Si es correcto: se guarda user_id, user_email y is_logged_in
+     en el estado de sesion (SessionState, unico por conexion).
+  4. Se oculta el login panel y se muestra el main panel.
+  5. Se muestra un saludo con el nombre del usuario.
+
+
+====================================================================
+PASO 2 — PANEL PRINCIPAL: CONFIGURAR BUSQUEDA
+====================================================================
+Lo que ve el usuario:
+  - Header con logo, titulo y pills de proveedores LLM configurados
+  - Accordion "Calculadora de costos" (expandible)
+  - Badge "MODELO ACTIVO" con el LLM seleccionado + dropdown inline
+  - Social Chips: 8 redes sociales clickeables
+      YouTube / X-Twitter / Reddit / Facebook /
+      Instagram / TikTok / Google Maps / Play Store
+  - Slider: "Comentarios por plataforma" (1-50, default 10)
+  - Accordion: "Configuracion de Google Maps"
+      - Toggle: activar busqueda geografica por cercania
+      - Radio: centro de busqueda (default / coordenadas / GPS)
+      - Slider: radio en metros (100-10000)
+  - Radio: "Como quieres proceder?"
+      - Manual: el usuario elige de que posts extraer
+      - Automatico: extrae de los mejores resultados sin preguntar
+  - Botones:
+      - "Buscar posts/videos para elegir" (modo Manual)
+      - "Buscar y Analizar" (modo Automatico)
+      - "Nueva Busqueda" (resetea)
+
+Interacciones:
+  - Hacer clic en un chip de red social: lo activa/desactiva (teal).
+    Se pueden seleccionar multiples plataformas.
+  - Cambiar el dropdown de modelo: actualiza el badge en tiempo real.
+  - Cambiar entre Manual y Automatico: muestra/oculta botones.
+
+
+====================================================================
+PASO 3A — FLUJO MANUAL: DESCUBRIMIENTO (Fase 1)
+====================================================================
+Boton presionado: "Buscar posts/videos para elegir"
+
+Lo que pasa (pipeline/orchestrator.py -> run_pipeline con discovery):
+  1. Para cada plataforma seleccionada, se buscan URLs reales con
+     SerpAPI (tools/search_tool.py).
+  2. Se llaman las APIs correspondientes:
+       YouTube  -> YouTube Data API v3 -> lista de videos
+       Reddit   -> PRAW               -> lista de subreddits/posts
+       Maps     -> Google Maps API    -> lista de lugares
+       Facebook/Instagram/TikTok/X -> APIFY actors
+       Play Store -> google-play-scraper -> lista de apps
+  3. Se genera un panel con tarjetas visuales agrupadas por plataforma.
+  4. Para Maps: aparece un mapa interactivo Plotly con los lugares.
+
+Lo que ve el usuario:
+  - Hint instructivo en color teal
+  - Grid de tarjetas seleccionables por plataforma
+    (thumbnail / titulo / autor / stat / link "Ver")
+  - Todas las tarjetas vienen seleccionadas por defecto
+  - Boton: "Obtener comentarios de lo seleccionado"
+
+El usuario puede:
+  - Desmarcar tarjetas que no le interesan
+  - Hacer clic en "Ver" para abrir el link original
+
+
+====================================================================
+PASO 3B — FLUJO AUTOMATICO: BUSQUEDA DIRECTA
+====================================================================
+Boton presionado: "Buscar y Analizar"
+
+Lo que pasa (pipeline/orchestrator.py -> run_pipeline):
+  1. Misma logica de busqueda y extraccion que el modo manual.
+  2. No espera seleccion del usuario.
+  3. Extrae comentarios de los primeros resultados de cada plataforma.
+  4. Pasa directo al Paso 4 (analisis).
+
+
+====================================================================
+PASO 4 — EXTRACCION DE COMENTARIOS (Fase 2 del modo Manual)
+====================================================================
+Boton presionado: "Obtener comentarios de lo seleccionado"
+
+Lo que pasa:
+  1. El JS del frontend envia un JSON con la seleccion del usuario:
+     {"youtube": ["id1","id2"], "reddit": ["id3"], ...}
+  2. El orchestrator extrae comentarios solo de los items elegidos.
+  3. Se consolida un DataFrame unico con todas las plataformas.
+
+Columnas del DataFrame consolidado:
+  comment / social_media / username / url / rating / likes / post_date
+
+
+====================================================================
+PASO 5 — ANALISIS (pipeline/analyzer.py)
+====================================================================
+Lo que pasa con el DataFrame:
+
+  5.1 CATEGORIAS (tools/categories_tool.py)
+      - Se toma una muestra del 20% de los comentarios.
+      - Se llama al LLM activo (Gemini/DeepSeek/Claude) para que
+        genere 5-10 categorias tematicas basadas en la muestra.
+      - Ejemplo: ["Calidad del producto", "Servicio al cliente",
+                  "Precio", "Envio", "Comparacion con competencia"]
+
+  5.2 CLASIFICACION ZERO-SHOT (tools/zero_shot_tool.py)
+      - Se carga BART-large-mnli (lazy load, solo una vez).
+      - Cada comentario se clasifica en una de las categorias
+        generadas por el LLM en el paso anterior.
+      - Resultado: columna "category" en cada fila.
+      - Se mide: classification_time (segundos).
+
+  5.3 SENTIMIENTO (tools/sentiment_tool.py)
+      - Se usa PySentimiento (modelo en espanol).
+      - Clasifica cada comentario en: Positivo / Negativo / Neutral.
+      - Resultado: columna "sentiment".
+
+  5.4 EMOCION (tools/emotion_tool.py)
+      - Se usa PySentimiento (emotions model).
+      - Clasifica en: Alegria / Tristeza / Enojo / Miedo /
+                      Sorpresa / Asco / Neutral.
+      - Resultado: columna "emotion".
+
+  5.5 EMBEDDINGS (tools/embeddings_tool.py)
+      - Se llama a Gemini Embedding API (gemini-embedding-2).
+      - Genera un vector de 3072 dimensiones por comentario.
+      - Resultado: columna "embedding" (lista de floats).
+      - Se mide: embedding_time (segundos).
+
+
+====================================================================
+PASO 6 — GUARDADO EN SUPABASE (db/)
+====================================================================
+Lo que pasa:
+
+  6.1 INSERT user_requests (PRIMERO, requerido por FK)
+      - Tabla: chismesito_gpt.user_requests
+      - Campos: user_id, user_email, session_id, query,
+                social_medias, comments_count, model, cost
+
+  6.2 INSERT comentarios por plataforma
+      - Tabla: chismesito_gpt.unified_comments
+      - Un INSERT por plataforma para mantener social_media correcto
+      - Incluye: comment, sentiment, emotion, category, username, url,
+                 rating, likes, post_date, session_id, user_id
+
+  6.3 UPDATE embeddings (db/vector.py)
+      - Para cada comentario: UPDATE SET embedding = [...]
+      - Usa el indice hnsw halfvec(3072) para busqueda semantica
+
+  6.4 INSERT request_performance
+      - Tabla: chismesito_gpt.request_performance
+      - Campos: execution_time, llm_model, classification_time,
+                embedding_model, embedding_time, max_comments,
+                num_social_medias, social_medias[]
+
+
+====================================================================
+PASO 7 — DASHBOARD DE RESULTADOS (ui/dashboard.py)
+====================================================================
+Lo que ve el usuario (Tab "Dashboard"):
+
+  - Mapa interactivo (solo si Maps fue seleccionado)
+      Scatter mapbox con los lugares y su sentimiento promedio.
+
+  - Bar chart: Comentarios por plataforma
+      Barras con conteo por red social.
+
+  - Bar chart: Distribucion de Sentimiento
+      Positivo / Negativo / Neutral con colores:
+      Verde #10b981 / Rojo #f87171 / Gris #94a3b8
+
+  - Bar chart: Distribucion de Emociones
+      Alegria / Tristeza / Enojo / etc.
+
+  - Bar chart horizontal: Top 10 Categorias
+      Las categorias mas frecuentes de mayor a menor.
+
+Lo que ve el usuario (Tab "Datos"):
+  - Tabla completa de comentarios con todas las columnas
+  - Boton de descarga CSV
+  - Boton de descarga Excel (openpyxl)
+
+
+====================================================================
+PASO 8 — CHAT RAG (pipeline/rag.py)
+====================================================================
+El usuario puede preguntar sobre los datos recolectados en lenguaje
+natural usando el chat que esta SIEMPRE visible en la pantalla.
+
+Lo que pasa al enviar una pregunta:
+
+  8.1 EMBEDDING DE LA PREGUNTA
+      - Se convierte la pregunta en un vector de 3072d con Gemini.
+
+  8.2 BUSQUEDA SEMANTICA (db/vector.py)
+      - Se llama a la funcion RPC chismesito_gpt.match_comments()
+        en Supabase con el vector de la pregunta.
+      - Retorna los 10 comentarios mas similares semanticamente
+        (medidos con distancia coseno, usando indice hnsw halfvec).
+
+  8.3 CONSTRUCCION DEL CONTEXTO
+      - Los comentarios recuperados se unen con separadores.
+      - Si Supabase no devuelve nada: se usa el DataFrame en memoria
+        (primeros 20 comentarios) como fallback.
+      - Se agregan estadisticas de la sesion (conteos por plataforma).
+
+  8.4 RESPUESTA DEL LLM
+      - El contexto + historial de chat + pregunta se envian al LLM
+        activo (el mismo que el usuario selecciono en el dropdown).
+      - Sistema prompt: "Eres ChismesitoGPT, analista de redes
+        sociales. Usa las estadisticas para preguntas de cantidades.
+        Responde en espanol."
+      - La respuesta se muestra en el chatbot.
+
+  8.5 HISTORIAL
+      - Se guarda en chismesito_gpt.chat_history (user + assistant)
+        vinculado a la session_id actual.
+
+
+====================================================================
+PASO 9 — NUEVA BUSQUEDA
+====================================================================
+Boton presionado: "Nueva Busqueda"
+
+Lo que pasa:
+  - Se genera un nuevo session_id (UUID).
+  - Se limpia el DataFrame en memoria.
+  - Se limpia el chatbot.
+  - Se resetean los graficos y la tabla.
+  - Se oculta el panel de seleccion.
+  - El usuario puede empezar otra busqueda sin hacer logout.
+
+
+====================================================================
+ESTADO DE SESION (SessionState)
+====================================================================
+Cada conexion de browser tiene su propia instancia de SessionState:
+
+  is_logged_in  : bool   — True despues de login exitoso
+  user_id       : str    — UUID del usuario en Supabase Auth
+  user_email    : str    — Email del usuario
+  session_id    : str    — UUID de la busqueda actual (nuevo UUID por cada busqueda)
+  df            : DataFrame — Datos en memoria de la busqueda actual
+  stats         : dict   — Conteo de comentarios por plataforma
+  chat_history  : list   — Historial del chat [{role, content}, ...]
+  model         : str    — ID del modelo LLM activo
+  errors        : list   — Errores no fatales de la sesion
+  discovery     : dict   — Resultados de la Fase 1 (modo manual)
+  gemma_processed: bool  — Si Gemma proceso los datos
+
+
+====================================================================
+ARQUITECTURA DE ARCHIVOS (referencia rapida)
+====================================================================
+
+app.py              -> Entry point Gradio, layout y eventos
+agent.py            -> Agente LangChain (no siempre activo)
+config.py           -> Variables de entorno (.env)
+llm_manager.py      -> Llamadas a Gemini, DeepSeek, Claude
+
+tools/
+  search_tool.py    -> SerpAPI: busca URLs de redes sociales
+  youtube_tool.py   -> YouTube Data API v3
+  reddit_tool.py    -> PRAW (Reddit)
+  playstore_tool.py -> google-play-scraper
+  apify_tool.py     -> APIFY (Facebook, Instagram, TikTok, X, Maps)
+  sentiment_tool.py -> PySentimiento: sentimiento
+  emotion_tool.py   -> PySentimiento: emociones
+  categories_tool.py-> LLM genera categorias
+  zero_shot_tool.py -> BART-large-mnli: clasificacion zero-shot
+  embeddings_tool.py-> Gemini embedding-2 (3072d)
+  export_tool.py    -> CSV y Excel
+
+pipeline/
+  orchestrator.py   -> run_pipeline(): coordina todo el flujo
+  analyzer.py       -> analyze_comments(): analisis por lotes
+  rag.py            -> retrieve_context() + rag_chat()
+
+db/
+  supabase_client.py-> Cliente Supabase singleton
+  ops.py            -> CRUD: insert_comments, insert_user_request...
+  vector.py         -> insert_embedding(), semantic_search()
+
+ui/
+  styles.py         -> CSS global + HTML de chips, tarjetas, badge
+  dashboard.py      -> Graficos Plotly
+  app_flujo.txt     -> Este archivo
+
+supabase/
+  schema.sql        -> Tablas, indices, funcion match_comments
+  rls_policies.sql  -> Seguridad, whitelist allowed_users
+  migration_v2_embed3072.sql -> Migracion segura para datos existentes

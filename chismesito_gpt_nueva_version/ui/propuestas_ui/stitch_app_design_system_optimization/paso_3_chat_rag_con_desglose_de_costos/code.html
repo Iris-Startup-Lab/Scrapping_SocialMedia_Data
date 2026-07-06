@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ChismesitoGPT v2 - Dashboard de Análisis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "inverse-primary": "#006a61",
+                "secondary-fixed-dim": "#6cd3f7",
+                "border-active": "rgba(13,148,136,0.5)",
+                "primary": "#6bd8cb",
+                "sentiment-negative": "#f87171",
+                "sentiment-positive": "#10b981",
+                "outline": "#879391",
+                "tertiary": "#4ddcc6",
+                "on-secondary-fixed-variant": "#004e61",
+                "primary-fixed-dim": "#6bd8cb",
+                "bg-surface": "rgba(255,255,255,0.04)",
+                "on-secondary-fixed": "#001f28",
+                "sentiment-neutral": "#94a3b8",
+                "on-primary": "#003732",
+                "on-tertiary": "#003730",
+                "bg-base": "#0d1117",
+                "on-primary-fixed-variant": "#005049",
+                "secondary-fixed": "#b7eaff",
+                "text-primary": "#e6edf3",
+                "error-container": "#93000a",
+                "outline-variant": "#3d4947",
+                "secondary": "#6cd3f7",
+                "surface-container-highest": "#31353c",
+                "on-secondary-container": "#002e3b",
+                "surface-container-low": "#181c22",
+                "surface-variant": "#31353c",
+                "tertiary-fixed": "#6ef9e2",
+                "text-secondary": "rgba(255,255,255,0.55)",
+                "on-secondary": "#003543",
+                "deepseek-blue": "#5B8DEF",
+                "inverse-surface": "#dfe2eb",
+                "claude-orange": "#D97757",
+                "on-tertiary-fixed": "#00201b",
+                "surface-dim": "#10141a",
+                "bg-surface-hover": "rgba(255,255,255,0.08)",
+                "tertiary-container": "#00a391",
+                "on-tertiary-fixed-variant": "#005047",
+                "surface-bright": "#353940",
+                "on-error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#4ddcc6",
+                "openai-green": "#74AA9C",
+                "text-muted": "rgba(255,255,255,0.35)",
+                "primary-container": "#29a195",
+                "background": "#10141a",
+                "primary-fixed": "#89f5e7",
+                "on-surface": "#dfe2eb",
+                "surface-container-high": "#262a31",
+                "surface-container-lowest": "#0a0e14",
+                "border-subtle": "rgba(255,255,255,0.10)",
+                "surface-tint": "#6bd8cb",
+                "surface": "#10141a",
+                "on-surface-variant": "#bcc9c6",
+                "gemini-blue": "#4285F4",
+                "error": "#ffb4ab",
+                "on-error": "#690005",
+                "secondary-container": "#269dbe",
+                "surface-container": "#1c2026",
+                "on-primary-fixed": "#00201d",
+                "on-background": "#dfe2eb",
+                "on-tertiary-container": "#00302a",
+                "inverse-on-surface": "#2d3137",
+                "on-primary-container": "#00302b"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "stack-gap": "1.5rem",
+                "section-padding": "1.5rem",
+                "container-margin": "2rem",
+                "gutter-md": "1rem",
+                "gutter-sm": "0.625rem"
+            },
+            "fontFamily": {
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"],
+                "headline-xl-mobile": ["Inter"],
+                "headline-lg": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-xl": ["Inter"],
+                "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                "body-md": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                "body-lg": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "headline-xl-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                "headline-lg": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "headline-xl": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+        }
+
+        .sentiment-card {
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+        .sentiment-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .chat-bubble-bot {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px 12px 12px 0px;
+        }
+
+        .chat-bubble-user {
+            background: rgba(13, 148, 136, 0.18);
+            border-radius: 12px 12px 0px 12px;
+            border: 1px solid rgba(13, 148, 136, 0.3);
+        }
+
+        .teal-glow {
+            box-shadow: 0 0 15px rgba(13, 216, 203, 0.1);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #10141a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #31353c;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3d4947;
+        }
+
+        /* Material Icon Alignment */
+        .material-symbols-outlined {
+            vertical-align: middle;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="bg-base min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-outline-variant flex justify-between items-center px-section-padding h-16 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-8">
+<span class="font-headline-lg text-headline-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">ChismesitoGPT v2</span>
+<nav class="hidden md:flex gap-6">
+<a class="font-label-md text-label-md pb-1" href="#">Dashboard</a>
+<a class="font-label-md text-label-md text-text-secondary hover:text-text-primary transition-colors" href="#">Discovery</a>
+<a class="font-label-md text-label-md text-text-secondary hover:text-text-primary transition-colors text-primary border-b-2 border-primary" href="#">History</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-muted">search</span>
+<input class="bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-1.5 text-body-md focus:ring-1 focus:ring-primary focus:border-primary transition-all outline-none w-64" placeholder="Search insights..." type="text"/>
+</div>
+<button class="text-text-secondary hover:bg-bg-surface-hover p-2 rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-text-secondary hover:bg-bg-surface-hover p-2 rounded-full transition-all active:scale-95">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Sidebar (Optional Desktop Anchor) -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 bg-surface-container-low/95 backdrop-blur-xl border-r border-outline-variant hidden lg:flex flex-col py-stack-gap shadow-sm mt-16">
+<div class="px-6 mb-6">
+<button class="w-full bg-gradient-to-r from-primary to-secondary text-on-primary font-label-md text-label-md py-3 rounded-xl font-bold shadow-[0_2px_12px_rgba(13,148,136,0.3)] transition-transform active:scale-95">
+                New Analysis
+            </button>
+</div>
+<div class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container/20 text-primary border-r-4 border-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+                Home
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary transition-all font-label-md text-label-md rounded-lg mx-2" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                Analysis
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary transition-all font-label-md text-label-md rounded-lg mx-2" href="#">
+<span class="material-symbols-outlined">explore</span>
+                Manual Discovery
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary transition-all font-label-md text-label-md rounded-lg mx-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+<div class="mt-auto px-4 border-t border-outline-variant pt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-text-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 text-text-secondary hover:text-text-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">description</span>
+                Documentation
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 lg:ml-64 pt-20 pb-24 px-section-padding space-y-stack-gap"><div class="flex flex-col lg:flex-row gap-gutter-md h-[calc(100vh-160px)]">
+<!-- Data Summary Sidebar -->
+<aside class="lg:w-80 flex flex-col gap-4">
+<div class="glass-panel p-6 flex flex-col gap-4">
+<h4 class="font-headline-lg text-headline-lg">Analysis Summary</h4>
+<div class="space-y-4">
+<div class="p-3 bg-surface-container-high rounded-lg">
+<p class="text-text-muted text-label-sm uppercase">Total Interactions</p>
+<p class="text-headline-lg text-primary">6,038</p>
+</div>
+<div class="p-3 bg-surface-container-high rounded-lg">
+<p class="text-text-muted text-label-sm uppercase">Platforms Found</p>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-1 bg-[#FF4500]/10 text-[#FF4500] rounded text-[10px] font-bold">REDDIT</span>
+<span class="px-2 py-1 bg-[#E1306C]/10 text-[#E1306C] rounded text-[10px] font-bold">INSTAGRAM</span>
+<span class="px-2 py-1 bg-white/10 text-text-primary rounded text-[10px] font-bold">X/TWITTER</span>
+</div>
+</div>
+<div class="p-3 bg-surface-container-high rounded-lg">
+<p class="text-text-muted text-label-sm uppercase">Primary Sentiment</p>
+<p class="text-body-lg text-sentiment-positive font-bold">Positive (+68%)</p>
+</div><div class="p-3 bg-surface-container-high rounded-lg border border-primary/10">
+<p class="text-text-muted text-label-sm uppercase mb-2">Costos de Sesión</p>
+<div class="space-y-1.5">
+<div class="flex justify-between text-[11px]">
+<span class="text-text-secondary">Búsqueda y Extracción</span>
+<span class="text-text-primary">$0.12</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-text-secondary">Análisis LLM</span>
+<span class="text-text-primary">$0.45</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-text-secondary">Embeddings</span>
+<span class="text-text-primary">$0.03</span>
+</div>
+<div class="pt-2 mt-2 border-t border-white/5 flex justify-between items-center">
+<span class="text-label-sm text-text-muted uppercase">Costo Total Estimado</span>
+<span class="text-body-lg text-primary font-bold">$0.60</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant">
+<p class="text-label-md text-text-secondary mb-2">Key Topics</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-[10px]">#Pricing</span>
+<span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-[10px]">#UI_UX</span>
+<span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-[10px]">#Performance</span>
+</div>
+</div>
+</div>
+<div class="glass-panel p-4 flex-1 overflow-hidden flex flex-col">
+<p class="text-label-md font-bold mb-3">Source Context</p>
+<div class="flex-1 overflow-y-auto space-y-2 pr-2">
+<div class="p-2 bg-surface-container-low rounded border border-outline-variant text-[11px] text-text-secondary">
+          "The new auth flow is way too slow compared to v1..."
+        </div>
+<div class="p-2 bg-surface-container-low rounded border border-outline-variant text-[11px] text-text-secondary">
+          "Love the new dark mode colors, very easy on the eyes."
+        </div>
+<div class="p-2 bg-surface-container-low rounded border border-outline-variant text-[11px] text-text-secondary">
+          "Is there an API for the new sentiment engine?"
+        </div>
+</div>
+</div>
+</aside>
+<!-- Immersive Chat Area -->
+<section class="flex-1 glass-panel flex flex-col overflow-hidden border-primary/20">
+<!-- Chat Header -->
+<div class="p-4 border-b border-outline-variant bg-primary/5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg">Deep-Dive Analysis</h2>
+<p class="text-label-sm text-primary/80">RAG ENGINE ACTIVE • 128 SOURCES LOADED</p><div class="mt-2 flex items-center gap-2">
+<div class="relative group">
+<button class="flex items-center gap-2 px-3 py-1 bg-surface-container-high border border-outline-variant rounded-full hover:border-primary transition-all">
+<div class="w-4 h-4 rounded-full bg-openai-green flex items-center justify-center">
+<span class="text-[8px] text-white font-bold">GPT</span>
+</div>
+<span class="text-label-sm text-text-primary">GPT-4o</span>
+<span class="material-symbols-outlined text-text-muted text-sm">expand_more</span>
+</button>
+<!-- Dropdown Menu (Hidden by default, shown on hover for demo) -->
+<div class="absolute top-full left-0 mt-1 w-48 bg-surface-container-highest border border-outline-variant rounded-xl shadow-xl hidden group-hover:block z-50">
+<div class="p-1">
+<button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-bg-surface-hover rounded-lg transition-colors">
+<div class="w-5 h-5 rounded-full bg-openai-green flex items-center justify-center flex-shrink-0">
+<span class="text-[8px] text-white font-bold">GPT</span>
+</div>
+<div class="text-left">
+<p class="text-label-md text-text-primary">OpenAI GPT-4o</p>
+<p class="text-[10px] text-text-muted">Fast &amp; Reliable</p>
+</div>
+</button>
+<button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-bg-surface-hover rounded-lg transition-colors">
+<div class="w-5 h-5 rounded-full bg-claude-orange flex items-center justify-center flex-shrink-0">
+<span class="text-[8px] text-white font-bold">CL</span>
+</div>
+<div class="text-left">
+<p class="text-label-md text-text-primary">Claude 3.5 Sonnet</p>
+<p class="text-[10px] text-text-muted">Nuanced Reasoning</p>
+</div>
+</button>
+<button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-bg-surface-hover rounded-lg transition-colors">
+<div class="w-5 h-5 rounded-full bg-gemini-blue flex items-center justify-center flex-shrink-0">
+<span class="text-[8px] text-white font-bold">GE</span>
+</div>
+<div class="text-left">
+<p class="text-label-md text-text-primary">Gemini 1.5 Pro</p>
+<p class="text-[10px] text-text-muted">Large Context</p>
+</div>
+</button>
+<button class="w-full flex items-center gap-3 px-3 py-2 hover:bg-bg-surface-hover rounded-lg transition-colors">
+<div class="w-5 h-5 rounded-full bg-deepseek-blue flex items-center justify-center flex-shrink-0">
+<span class="text-[8px] text-white font-bold">DS</span>
+</div>
+<div class="text-left">
+<p class="text-label-md text-text-primary">DeepSeek V3</p>
+<p class="text-[10px] text-text-muted">Efficient Coding</p>
+</div>
+</button>
+</div>
+</div>
+</div>
+<span class="text-[10px] text-text-muted uppercase tracking-tighter">Modelo Activo</span>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-bg-surface-hover rounded-lg text-text-secondary"><span class="material-symbols-outlined">download</span></button>
+<button class="p-2 hover:bg-bg-surface-hover rounded-lg text-text-secondary"><span class="material-symbols-outlined">refresh</span></button>
+</div>
+</div>
+<!-- Messages -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 bg-surface-dim/20">
+<div class="flex gap-4">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
+</div>
+<div class="chat-bubble-bot p-4 text-body-lg max-w-[80%] shadow-sm">
+          Análisis completado. He procesado las tendencias de las últimas 24 horas en Reddit, IG y X. 
+          <br/><br/>
+          He detectado un pico de interés en la <strong>interfaz de carga</strong>. ¿Deseas profundizar en los comentarios específicos o ver la distribución geográfica de esta queja?
+        </div>
+</div>
+<div class="flex gap-4 justify-end">
+<div class="chat-bubble-user p-4 text-body-lg max-w-[80%] shadow-sm">
+          Muéstrame por qué los usuarios de Reddit dicen que la carga es lenta. ¿Es un problema general o de una región específica?
+        </div>
+<div class="w-8 h-8 rounded-lg bg-secondary/20 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm">person</span>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
+</div>
+<div class="chat-bubble-bot p-4 text-body-lg max-w-[80%] shadow-sm">
+          Basado en 452 hilos de Reddit analizados:
+          <ul class="list-disc ml-5 mt-2 space-y-2">
+<li>El 65% de las quejas provienen de usuarios en <span class="text-primary">Europa</span>.</li>
+<li>El cuello de botella parece estar en el <strong>paso de autenticación MFA</strong>.</li>
+<li>Los usuarios comparan la velocidad actual (4.2s) con la versión anterior (1.8s).</li>
+</ul>
+<div class="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
+<p class="text-label-sm text-text-muted mb-1">Dato Relevante:</p>
+<p class="text-body-md italic">"The spinner just hangs for ages after I enter my code. It's faster to just restart the app." - u/TechEnthusiast</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Input -->
+<div class="p-6 border-t border-outline-variant bg-surface-container-low">
+<div class="relative max-w-4xl mx-auto">
+<input class="w-full bg-surface border border-outline-variant rounded-2xl pl-6 pr-16 py-4 text-body-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none shadow-lg" placeholder="Ask a deep-dive question about the social trends..." type="text"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-lg hover:scale-105 transition-transform active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+<p class="text-center text-[10px] text-text-muted mt-3 uppercase tracking-widest">AI can make mistakes. Verify critical insights.</p>
+</div>
+</section>
+</div></main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 w-full rounded-t-xl z-50 md:hidden bg-surface-dim/90 backdrop-blur-lg border-t border-outline-variant shadow-[0_-4px_12px_rgba(0,0,0,0.5)] flex justify-around items-center h-16 px-gutter-md">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 scale-110 duration-150" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-label-sm text-label-sm">Data</span>
+</a>
+<a class="flex flex-col items-center justify-center text-text-secondary hover:text-primary" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-sm text-label-sm">Chat</span>
+</a>
+</nav>
+<script>
+        // Data Visualizations Initialization
+        const sentimentColors = ['#10b981', '#f87171', '#94a3b8']; // Positive, Negative, Neutral
+
+        // Sentiment Bar Chart
+        const sentimentTrace = {
+            x: ['Positive', 'Negative', 'Neutral'],
+            y: [550, 120, 310],
+            type: 'bar',
+            marker: {
+                color: sentimentColors,
+                opacity: 0.8
+            },
+            width: 0.6
+        };
+
+        const sentimentLayout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#dfe2eb', family: 'Inter' },
+            margin: { t: 10, b: 40, l: 40, r: 10 },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.05)', zeroline: false },
+            xaxis: { zeroline: false }
+        };
+
+        Plotly.newPlot('sentimentChart', [sentimentTrace], sentimentLayout, {responsive: true, displayModeBar: false});
+
+        // Emotion Pulse (Radar Chart)
+        const emotionData = [{
+            type: 'scatterpolar',
+            r: [80, 45, 20, 30, 60],
+            theta: ['Joy', 'Anger', 'Sadness', 'Fear', 'Surprise'],
+            fill: 'toself',
+            fillcolor: 'rgba(107, 216, 203, 0.2)',
+            line: { color: '#6bd8cb' }
+        }];
+
+        const emotionLayout = {
+            polar: {
+                radialaxis: { visible: false },
+                angularaxis: { color: '#dfe2eb' },
+                bgcolor: 'rgba(0,0,0,0)'
+            },
+            showlegend: false,
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { t: 20, b: 20, l: 20, r: 20 }
+        };
+
+        Plotly.newPlot('emotionChart', emotionData, emotionLayout, {responsive: true, displayModeBar: false});
+
+        // Categories Horizontal Bar Chart
+        const categoryTrace = {
+            y: ['Pricing', 'User Interface', 'API Specs', 'Mobile App', 'Security', 'Performance', 'Support', 'Onboarding', 'Documentation', 'Integrations'],
+            x: [92, 88, 76, 71, 65, 62, 58, 45, 40, 38],
+            type: 'bar',
+            orientation: 'h',
+            marker: {
+                color: '#6cd3f7',
+                opacity: 0.8
+            }
+        };
+
+        const categoryLayout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#dfe2eb', family: 'Inter' },
+            margin: { t: 10, b: 40, l: 120, r: 20 },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.05)' },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.05)' }
+        };
+
+        Plotly.newPlot('categoriesChart', [categoryTrace], categoryLayout, {responsive: true, displayModeBar: false});
+
+        // Micro-interactions
+        function toggleChat() {
+            const chat = document.getElementById('ragChat');
+            const messages = document.getElementById('chatMessages');
+            if (messages.classList.contains('hidden')) {
+                messages.classList.remove('hidden');
+                chat.style.height = 'auto';
+            } else {
+                messages.classList.add('hidden');
+                chat.style.height = '64px';
+            }
+        }
+
+        // Auto-scroll chat
+        const chatContainer = document.getElementById('chatMessages');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    </script>
+</body></html>
