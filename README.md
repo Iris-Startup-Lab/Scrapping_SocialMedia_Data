@@ -11,6 +11,13 @@
 
 ---
 
+## Arquitectura de la Aplicación
+
+
+
+![](./chismesito_gpt_nueva_version/icons/imagenes/Chismesito_gpt_architecture.png)
+
+
 ## Versión Anterior (Obsoleta)
 
 La versión anterior, conocida internamente como **"Iris Social Media Downloader" (v0.5)**, era una aplicación construida con **Python Shiny** cuyo objetivo era descargar y analizar comentarios de redes sociales. En resumen:
