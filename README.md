@@ -247,3 +247,15 @@ Cliente (Gradio)                    Servidor (Supabase)
 ## Flujo de Datos Detallado
 
 Para un desglose completo de cómo se procesa la información desde que el usuario introduce un término de búsqueda hasta que se genera la respuesta en el chat RAG, consulta la guía interna [`ui/app_flujo.txt`](./ui/app_flujo.txt).
+
+
+## Pasos a futuro
+
+* Límite de caracteres por prompt
+* El usuario podrá ver sus sesiones pasadas
+* Un usuario administrador para poder gestionar los usuarios permitidos y el límite de creditos por usuario
+* Límite de 2 USD por usuario por mes
+* Animaciones de carga y progreso para cada paso del wizard
+* Notificaciones de navegador
+* Responsivo para uso en móvil
+* Prompts por voz usando Whisper como herramienta de transcripción
