@@ -7,9 +7,8 @@ import numpy as np
 import time
 
 from llm_manager import generate_categories_with_model
-from tools.zero_shot_tool import classify_comment
-from tools.sentiment_tool import analyze_sentiment_text
-from tools.emotion_tool import analyze_emotion_text
+from tools.zero_shot_tool import classify_comments_batch
+from tools.emotion_tool import analyze_emotions_batch
 from tools.embeddings_tool import embed_single
 
 logger = logging.getLogger(__name__)
@@ -43,24 +42,32 @@ def analyze_comments(df: pd.DataFrame, sample_pct: float = 0.20, model: str = "g
 
     logger.info(f"Generando categorias con muestra de {sample_size} comentarios (model={model})...")
     candidate_labels = generate_categories_with_model(combined_sample, model=model)
-    logger.info(f"Categorias: {candidate_labels}")
 
     if not candidate_labels:
-        candidate_labels = ["General", "Opinion positiva", "Opinion negativa"]
+        # El LLM no devolvió categorías válidas (ya quedó logueado el porqué en llm_manager).
+        logger.warning("Categorías: usando fallback genérico ['General','Opinión positiva','Opinión negativa'] "
+                       "— la categorización saldrá poco específica en esta corrida.")
+        candidate_labels = ["General", "Opinión positiva", "Opinión negativa"]
+    else:
+        logger.info(f"Categorias: {candidate_labels}")
 
     # Paso 2: Zero-shot clasifica cada comentario
     t_start_class = time.time()
-    logger.info(f"Clasificando {len(comments)} comentarios con zero-shot...")
-    df["category"] = [classify_comment(c, candidate_labels) for c in comments]
+    logger.info(f"Clasificando {len(comments)} comentarios con zero-shot (batch)...")
+    df["category"] = classify_comments_batch(comments, candidate_labels)
     t_end_class = time.time()
 
-    # Paso 3: Sentimiento
-    logger.info("Analizando sentimiento...")
-    df["sentiment"] = [analyze_sentiment_text(c) for c in comments]
+    # Visibilidad: cuántos comentarios quedaron sin categoría real (falla del zero-shot).
+    n_err = int((df["category"] == "Error").sum())
+    if n_err:
+        logger.warning(f"Zero-shot: {n_err}/{len(df)} comentarios quedaron con category='Error' "
+                       f"(falló la clasificación para esos textos).")
 
-    # Paso 4: Emocion
-    logger.info("Analizando emociones...")
-    df["emotion"] = [analyze_emotion_text(c) for c in comments]
+    # Paso 3+4: Emoción (un solo modelo, batch) → sentimiento derivado de la emoción
+    logger.info("Analizando emoción y derivando sentimiento (batch)...")
+    emo_sent = analyze_emotions_batch(comments)
+    df["emotion"]   = [e for (e, _s) in emo_sent]
+    df["sentiment"] = [s for (_e, s) in emo_sent]
 
     # Paso 5: Embeddings (Gemini 768d)
     t_start_embed = time.time()

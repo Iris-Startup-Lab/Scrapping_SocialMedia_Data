@@ -323,8 +323,14 @@ IMPORTANTE:
 - Responde SOLO con una lista de Python. Ejemplo:
 ['Calidad del producto', 'Precio', 'Servicio al cliente', 'Entrega', 'Empaque']"""
 
-    raw = get_llm_response(prompt=prompt, model=model, system_prompt=system)
-    raw = raw.strip()
+    raw = (get_llm_response(prompt=prompt, model=model, system_prompt=system) or "").strip()
+
+    # get_llm_response devuelve un STRING que empieza con "Error" si la llamada falló
+    # (timeout, rate-limit, modelo no disponible…). No lo parsees como categorías:
+    # regresa vacío para que el caller aplique su fallback genérico, y déjalo LOGUEADO.
+    if raw.startswith("Error"):
+        logger.warning(f"generate_categories: el LLM ({model}) no respondió con categorías. Detalle: {raw[:180]}")
+        return []
 
     # Limpiar bloques de código markdown que el LLM puede devolver
     import re
@@ -332,15 +338,33 @@ IMPORTANTE:
     raw = re.sub(r"```", "", raw)
     raw = raw.strip()
 
+    # 1) Intento directo: la salida ES una lista de Python
     try:
         categories = ast.literal_eval(raw)
-        if isinstance(categories, list) and all(isinstance(c, str) for c in categories):
-            return categories[:10]
+        if isinstance(categories, list):
+            cats = [str(c).strip() for c in categories if str(c).strip()]
+            if cats:
+                return cats[:10]
     except (SyntaxError, ValueError):
         pass
 
-    cats = [c.strip().strip("'\"") for c in raw.strip("[]").split(",")]
-    return [c for c in cats if c][:10] or ["General"]
+    # 2) Intento tolerante: extraer el primer [...] aunque venga rodeado de texto
+    m = re.search(r"\[.*\]", raw, re.DOTALL)
+    if m:
+        try:
+            categories = ast.literal_eval(m.group(0))
+            if isinstance(categories, list):
+                cats = [str(c).strip().strip("'\"") for c in categories if str(c).strip()]
+                if cats:
+                    return cats[:10]
+        except (SyntaxError, ValueError):
+            pass
+
+    # No se pudo parsear: LOGUEAR la salida cruda (para diagnóstico) y dejar que
+    # el caller use su fallback genérico en vez de inventar categorías basura.
+    logger.warning(f"generate_categories: no pude parsear categorías del LLM ({model}). "
+                   f"Salida cruda: {raw[:200]!r}")
+    return []
 
 
 # ─── Información de configuración para UI ───────────────────────────

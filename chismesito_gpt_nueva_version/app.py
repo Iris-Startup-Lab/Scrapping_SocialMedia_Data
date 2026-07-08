@@ -602,7 +602,7 @@ with gr.Blocks(title="ChismesitoGPT v2") as demo:
                                         elem_id="login-email")
             login_password = gr.Textbox(label="🔒 Contraseña", type="password",
                                         elem_id="login-password")
-            login_btn      = gr.Button("🔓 Iniciar Sesión", variant="primary", size="lg")
+            login_btn      = gr.Button("🔒 Iniciar Sesión 🔓", variant="primary", size="lg")
             login_status   = gr.Markdown("", elem_classes=["status-md"])
 
     # ───────────────────────────────────────────────────────────────
@@ -894,7 +894,7 @@ with gr.Blocks(title="ChismesitoGPT v2") as demo:
         fn=lambda: go_to_step(1), inputs=None, outputs=[tabs],
     ).then(
         fn=None,
-        js="() => { setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 300); }"
+        js="() => { [150, 500, 900].forEach(d => setTimeout(() => window.dispatchEvent(new Event('resize')), d)); }"
     )
 
     # Search
@@ -918,7 +918,7 @@ with gr.Blocks(title="ChismesitoGPT v2") as demo:
         fn=lambda: go_to_step(1), inputs=None, outputs=[tabs],
     ).then(
         fn=None,
-        js="() => { setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 300); }"
+        js="() => { [150, 500, 900].forEach(d => setTimeout(() => window.dispatchEvent(new Event('resize')), d)); }"
     )
 
     # Nueva búsqueda — resetea datos y vuelve al Paso 1

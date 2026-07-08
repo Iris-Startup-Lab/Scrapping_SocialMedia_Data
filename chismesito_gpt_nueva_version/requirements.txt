@@ -7,6 +7,11 @@
 # Fijado para reproducibilidad en HuggingFace Spaces (debe coincidir con sdk_version del README).
 gradio==6.19.0
 
+# ─── HuggingFace Spaces — ZeroGPU ──────────────────────────────────────────
+# Habilita el decorador @spaces.GPU (clasificación zero-shot acelerada en A100).
+# Inofensivo en local; en HF ZeroGPU es obligatorio.
+spaces
+
 # ─── Agent Orchestration ──────────────────────────────────────────────────
 langchain>=0.2.0
 
@@ -35,9 +40,13 @@ openpyxl>=3.1
 xlsxwriter>=3.1
 
 # ─── NLP / Análisis de Texto ───────────────────────────────────────────   ────
-pysentimiento>=0.7                           # Sentimiento + emociones (español nativo)
-transformers>=4.35                           # BART zero-shot classifier
-torch>=2.0                                   # Dependencia de transformers
+# Emoción (y sentimiento derivado de ella) — un solo modelo RoBERTuito:
+#   - En local/CPU:  librería pysentimiento (mejor preprocesado nativo).
+#   - En HF Spaces:  el MISMO modelo cargado vía transformers (device=-1, ZeroGPU-safe).
+# Zero-shot de categorías: MoritzLaurer/mDeBERTa-v3-base-mnli-xnli (acelerado con @spaces.GPU en HF).
+pysentimiento>=0.7                           # ruta local (sentimiento/emoción español)
+transformers>=4.35                           # pipelines: emotion (HF) + zero-shot classifier
+torch>=2.0                                   # backend de transformers
 
 # ─── Social Media APIs ─────────────────────────────────────────────────────
 praw>=7.0                                    # Reddit
@@ -58,6 +67,7 @@ httpx>=0.25
 python-dotenv>=1.0                           # Carga de .env
 deep-translator>=1.11                        # Traducción / detección idioma
 
-# ─── Modelo spaCy español ──────────────────────────────────────────────────
-# Se instala por separado:
-# python -m spacy download es_core_news_md
+# ─── spaCy (detección de entidades: sustantivos, verbos, etc. — uso futuro) ──
+# Antes venía como dependencia de pysentimiento; ahora se declara explícito.
+spacy>=3.8,<3.9                              # debe ser 3.8.x para casar con el modelo de abajo
+https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.8.0/es_core_news_md-3.8.0-py3-none-any.whl

@@ -36,6 +36,10 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 APP_ENV = os.getenv("APP_ENV", "development")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# Detección de entorno HuggingFace Spaces (HF define SPACE_ID en sus contenedores).
+# Sirve para activar la ruta GPU (ZeroGPU) y omitir comportamientos locales.
+IS_SPACES = "SPACE_ID" in os.environ
+
 # Auth — whitelist de emails autorizados (CSV en .env)
 # Ejemplo: ALLOWED_EMAILS=admin@empresa.com,colega@empresa.com
 ALLOWED_EMAILS_RAW = os.getenv("ALLOWED_EMAILS", "")

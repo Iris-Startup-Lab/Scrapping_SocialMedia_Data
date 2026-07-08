@@ -10,7 +10,7 @@ pinned: false
 short_description: Descubre lo que dicen las redes sociales (análisis + RAG)
 ---
 
-# 🕵️ ChismesitoGPT v2
+# ChismesitoGPT v2
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![UI Framework](https://img.shields.io/badge/Gradio-6.x-orange.svg)](https://gradio.app/)
@@ -21,11 +21,11 @@ short_description: Descubre lo que dicen las redes sociales (análisis + RAG)
 
 ---
 
-## 📸 Interfaz de la Aplicación
+## Arquitectura de la Aplicación
 
-<!-- ![Wizard Paso 1: Configuración](./docs/images/step1_config.png) -->
-<!-- ![Wizard Paso 2: Dashboard](./docs/images/step2_dashboard.png) -->
-<!-- ![Wizard Paso 3: Chat RAG](./docs/images/step3_chat.png) -->
+![](./icons/imagenes/Chismesito_gpt_architecture.png)
+
+## Interfaz de la Aplicación
 
 ---
 
@@ -50,7 +50,13 @@ short_description: Descubre lo que dicen las redes sociales (análisis + RAG)
 
 ---
 
-## 🛠️ Arquitectura de Archivos
+## Arquitectura de Base de datos
+
+[Link al diagrama de arquitectura de base de datos](https://dbdiagram.io/d/chismesito_gpt_diagram-6a4c1b0636d348d1207ecab5)
+
+![](./icons/imagenes/chismesito_gpt_diagram.png)
+
+## Arquitectura de Archivos
 
 ```text
 chismesito_gpt_nueva_version/
@@ -89,7 +95,7 @@ chismesito_gpt_nueva_version/
 
 ---
 
-## 🔑 Variables de Entorno (`.env`)
+## Variables de Entorno (`.env`)
 
 Crea un archivo `.env` en la raíz del proyecto tomando como referencia el siguiente esquema:
 
@@ -126,7 +132,7 @@ ALLOWED_EMAILS=admin@empresa.com,usuario@empresa.com
 
 ---
 
-## 🚀 Instalación y Despliegue Local
+## Instalación y Despliegue Local
 
 ### 1. Clonar el repositorio y preparar el entorno conda
 
@@ -161,7 +167,7 @@ Abre en tu navegador la dirección `http://localhost:7860`.
 
 ---
 
-## 🐳 Despliegue en Hugging Face Spaces
+## Despliegue en Hugging Face Spaces
 
 La aplicación se ejecuta nativamente en entornos Hugging Face mediante Docker.
 
@@ -186,6 +192,17 @@ Cliente (Gradio)                    Servidor (Supabase)
 
 ---
 
-## 📈 Flujo de Datos Detallado
+## Flujo de Datos Detallado
 
 Para un desglose completo de cómo se procesa la información desde que el usuario introduce un término de búsqueda hasta que se genera la respuesta en el chat RAG, consulta la guía interna [`ui/app_flujo.txt`](./ui/app_flujo.txt).
+
+## Pasos a futuro
+
+* Límite de caracteres por prompt
+* El usuario podrá ver sus sesiones pasadas
+* Un usuario administrador para poder gestionar los usuarios permitidos y el límite de creditos por usuario
+* Límite de 2 USD por usuario por mes
+* Animaciones de carga y progreso para cada paso del wizard
+* Notificaciones de navegador
+* Responsivo para uso en móvil
+* Prompts por voz usando Whisper como herramienta de transcripción

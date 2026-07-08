@@ -1,0 +1,166 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║   DESCUBRIMIENTOS — Costo de cómputo en Supabase (ChismesitoGPT)       ║
+║   Análisis de la factura Invoice-EAEHQB-00018                         ║
+║   Fecha del análisis: 8 de julio de 2026                              ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+
+────────────────────────────────────────────────────────────────────────
+1. RESUMEN EJECUTIVO (TL;DR)
+────────────────────────────────────────────────────────────────────────
+
+El "costo horrible de cómputo" NO lo causó el diseño de la base de datos
+ni los vectores (embeddings). Lo causó tener DOS proyectos de Supabase
+corriendo 24/7, cuando el plan Pro solo cubre el cómputo de UNO.
+
+  • Cargo real del excedente:   $8.87 USD
+  • Causa:                      un 2º proyecto ocioso, sobrante de la
+                                época en que la cuenta era gratuita.
+  • Solución:                   pausar o eliminar ese proyecto.
+  • Resultado:                  la factura vuelve a los $25 del plan Pro.
+
+
+────────────────────────────────────────────────────────────────────────
+2. CÓMO FUNCIONA LA FACTURACIÓN DEL PLAN PRO ($25/mes)
+────────────────────────────────────────────────────────────────────────
+
+El plan Pro cuesta $25/mes e incluye:
+
+  • $10 de CRÉDITO DE CÓMPUTO   → alcanza para UN instance Micro.
+  • 8 GB de disco (base de datos)
+  • 250 GB de egress (tráfico de salida)
+  • 100,000 usuarios activos mensuales (MAU)
+
+Concepto clave — el crédito de cómputo:
+  - Supabase cobra el cómputo POR HORA y POR PROYECTO.
+  - Un instance "Micro" (2-core ARM, 1 GB RAM) cuesta ~$10/mes.
+  - El crédito de $10 cubre exactamente UN Micro corriendo todo el mes.
+  - NO es un límite de proyectos. Puedes tener los que quieras, pero
+    a partir del 2º cada uno suma su propio cómputo sobre el crédito.
+
+Tabla de costo según proyectos activos (todos en Micro):
+
+    Proyectos │ Cómputo │ - Crédito │ Pagas de cómputo
+    ──────────┼─────────┼───────────┼──────────────────
+        1     │  $10    │  -$10     │   $0      ✅
+        2     │  $20    │  -$10     │  ~$9.43
+        3     │  $30    │  -$10     │  ~$19
+
+El crédito es POR ORGANIZACIÓN, no por proyecto.
+
+
+────────────────────────────────────────────────────────────────────────
+3. QUÉ DECÍA LA FACTURA (desglose real)
+────────────────────────────────────────────────────────────────────────
+
+Invoice EAEHQB-00018 — periodo Jun 8 a Jul 7, 2026:
+
+  Compute Hours ................................. $18.87
+    Micro (rdqtsoydvgxdbbvhnmlk)  702 h × $0.01344 = $9.43   ← proyecto REAL
+    Micro (mxqmlroliwgyndxbwydl)  702 h × $0.01344 = $9.43   ← proyecto OCIOSO
+    Descuento (crédito)                            = -$10.00
+                                          Subtotal =  $8.87   ← EL EXCEDENTE
+
+  Egress GB ....................................... $0.00
+    rdqtsoydvgxdbbvhnmlk  0.036 GB                 (tráfico real, mínimo)
+    mxqmlroliwgyndxbwydl  0 GB                      (CERO tráfico = ocioso)
+
+  Monthly Active Users .............. 3 usuarios .. $0.00  (cubierto)
+  Pro Plan (Jul 8 – Aug 7) ....................... $25.00  (mes por adelantado)
+                                          ─────────────────
+                                    TOTAL          $33.87
+                                    ( = $25 plan + $8.87 excedente )
+
+Las dos pistas que delataron al culpable:
+  1. Aparecen DOS instances Micro, cada uno 702 horas (≈ mes completo 24/7).
+  2. El proyecto mxqmlroliwgyndxbwydl tuvo 0 GB de egress → nadie lo usa,
+     pero igual cobró $9.43 solo por estar prendido.
+
+
+────────────────────────────────────────────────────────────────────────
+4. IDENTIFICACIÓN DE LOS PROYECTOS
+────────────────────────────────────────────────────────────────────────
+
+  rdqtsoydvgxdbbvhnmlk  → EL PROYECTO BUENO
+      - Es el que usa la app (está en el archivo .env, variable SUPABASE_URL).
+      - Es el único con tráfico real (egress > 0).
+      - Se queda.
+
+  mxqmlroliwgyndxbwydl  → PROYECTO A ELIMINAR
+      - Sobrante de la época en que la cuenta era GRATUITA.
+      - En cuenta gratuita NO generaba cargos de cómputo.
+      - Al subir la organización a Pro, la regla cambió: en Pro TODO
+        proyecto factura cómputo por hora, y el crédito de $10 solo
+        cubre uno. Así, este proyecto viejo empezó a cobrar ~$9.43/mes
+        EN SILENCIO desde el upgrade a Pro.
+      - Cero tráfico, no lo necesita nadie.
+
+Verificación hecha en el repositorio:
+  - Se barrió TODO el proyecto (código, configs, notas, backups).
+  - CERO referencias a mxqmlroliwgyndxbwydl.
+  - app_bkp.py no tiene ninguna URL de Supabase hardcodeada.
+  - Conclusión: nada en este repo depende del proyecto viejo.
+    Es seguro pausarlo/eliminarlo.
+
+
+────────────────────────────────────────────────────────────────────────
+5. POR QUÉ UNA CUENTA "GRATIS" EMPIEZA A COBRAR AL PASAR A PRO
+────────────────────────────────────────────────────────────────────────
+
+  Cuenta gratuita:  el cómputo de los proyectos no se factura
+                    (con límites de rendimiento y pausa por inactividad).
+
+  Cuenta Pro:       cada proyecto corre en su propio instance y factura
+                    cómputo por hora. El crédito de $10 solo absorbe uno.
+
+Moraleja: al pasar a Pro, revisa CUÁNTOS proyectos tienes activos en la
+organización. Cada extra cuesta ~$9.43/mes aunque esté ocioso.
+
+
+────────────────────────────────────────────────────────────────────────
+6. SOLUCIÓN Y ACCIONES
+────────────────────────────────────────────────────────────────────────
+
+Acción inmediata (elimina el 100% del excedente):
+  → Pausar o eliminar el proyecto mxqmlroliwgyndxbwydl.
+    Dashboard → (seleccionar el proyecto) → Settings → General →
+      • "Pause project"  = detiene el cobro, es REVERSIBLE. Empezar aquí.
+      • "Delete project" = irreversible, borra su base de datos.
+    El cobro de cómputo se detiene en el momento de pausar/eliminar.
+
+Resultado esperado:
+  Con un solo proyecto activo, el crédito de $10 cubre el Micro entero
+  → cómputo neto $0 → la factura vuelve a ser solo los $25 del plan Pro.
+
+Buenas prácticas a futuro:
+  - Si necesitas un proyecto de staging/pruebas, PÁUSALO cuando no lo uses
+    (un proyecto pausado no factura cómputo).
+  - Mantén activa la "spend cap" del plan Pro (viene ON por defecto):
+    bloquea excedentes en vez de cobrarlos.
+  - Revisa la sección Billing → Usage del dashboard de vez en cuando
+    para ver el desglose por concepto (Compute, Disk, Egress).
+
+
+────────────────────────────────────────────────────────────────────────
+7. NOTA SOBRE EL DISEÑO VECTORIAL (no es urgente, pero conviene saberlo)
+────────────────────────────────────────────────────────────────────────
+
+Los embeddings de 3072 dimensiones + el índice HNSW NO costaron nada en
+esta factura (el disco sigue bajo 8 GB y no hubo cargos de disco ni IOPS).
+
+Sin embargo, a futuro pueden acercarte al muro de 8 GB de disco, porque
+cada vector de 3072 dimensiones ocupa ~12 KB por fila más el índice HNSW.
+
+Mejora recomendada (en el backlog, NO urgente):
+  • Reducir embeddings a 768 dimensiones  → ~4× menos disco (~3 KB/fila).
+  • Quitar el índice HNSW y hacer búsqueda exacta dentro de cada sesión
+    (la búsqueda ya se filtra por session_id, son pocos cientos de filas).
+  • Insertar el embedding en el mismo INSERT del comentario, en vez de
+    hacer un UPDATE por fila aparte (menos escrituras, menos disco).
+
+Esto se hará cuando el disco empiece a acercarse a los 8 GB, no antes.
+
+
+────────────────────────────────────────────────────────────────────────
+Fin del documento.
+────────────────────────────────────────────────────────────────────────
