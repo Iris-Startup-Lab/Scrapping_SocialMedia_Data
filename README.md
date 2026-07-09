@@ -251,11 +251,20 @@ Para un desglose completo de cómo se procesa la información desde que el usuar
 
 ## Pasos a futuro
 
+### Alta prioridad
+* Seguridad para evitar búsquedas de términos ajenos al propósito de la app (Crítico)
+* ¿Migrarlo a AWS? (Potencial de migrarlo a GCP más rápido)
+* Skills de creación de gráficas bajo demanda dentro del chat
 * Límite de caracteres por prompt
-* El usuario podrá ver sus sesiones pasadas
+* El usuario podrá ver sus sesiones pasadas (uso de los "S3" de Supabase)
 * Un usuario administrador para poder gestionar los usuarios permitidos y el límite de creditos por usuario
 * Límite de 2 USD por usuario por mes
-* Animaciones de carga y progreso para cada paso del wizard
+
+### Prioridad media
+* Animaciones de carga y progreso para cada paso del wizard (Ayuda de equipo de diseño para gifs de carga)
 * Notificaciones de navegador
 * Responsivo para uso en móvil
+
+### Prioridad baja
 * Prompts por voz usando Whisper como herramienta de transcripción
+* Ver la posibilidad de cambiar el mapa por OpenStreetMaps (aunque este depende de la disponibilidad de la API)

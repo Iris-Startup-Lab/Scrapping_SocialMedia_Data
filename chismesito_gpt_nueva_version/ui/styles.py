@@ -19,10 +19,13 @@ def _svg_to_data_uri(filename: str) -> str:
     return f"data:image/svg+xml;base64,{b64}"
 
 # Pre-cargar íconos
-ICON_GEMINI   = _svg_to_data_uri("gemini.svg")
-ICON_DEEPSEEK = _svg_to_data_uri("deepseek.svg")
-ICON_CLAUDE   = _svg_to_data_uri("claude.svg")
-ICON_OPENAI   = _svg_to_data_uri("open-ai.svg")
+ICON_GEMINI     = _svg_to_data_uri("gemini.svg")
+ICON_DEEPSEEK   = _svg_to_data_uri("deepseek.svg")
+ICON_CLAUDE     = _svg_to_data_uri("claude.svg")
+ICON_OPENAI     = _svg_to_data_uri("open-ai.svg")
+ICON_DOWNLOAD_1 = _svg_to_data_uri("download-1.svg")
+ICON_FILE_CSV   = _svg_to_data_uri("file-csv-solid-full.svg")
+ICON_FILE_EXCEL = _svg_to_data_uri("file-excel-solid-full.svg")
 
 # Mapeo provider → ícono
 _PROVIDER_ICONS = {
@@ -1011,5 +1014,188 @@ body, .gradio-container {
     color: #6cd3f7;
 }
 .topic-chip.off { color: rgba(255,255,255,0.35); }
+
+/* ── Dataset y Descargas Premium ── */
+.dataset-section {
+    background: rgba(255,255,255,0.02) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    margin-top: 20px !important;
+}
+
+.dataset-section h3 {
+    margin: 0 0 16px 0 !important;
+}
+
+.download-row {
+    display: flex !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+    flex-wrap: wrap !important;
+}
+
+.download-btn {
+    flex: 1 !important;
+    min-width: 180px !important;
+    height: 42px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+#download-csv-btn {
+    background: rgba(34, 197, 94, 0.1) !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+    color: #4ade80 !important;
+}
+#download-csv-btn:hover {
+    background: rgba(34, 197, 94, 0.2) !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15) !important;
+}
+
+#download-xlsx-btn {
+    background: rgba(16, 185, 129, 0.1) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: #34d399 !important;
+}
+#download-xlsx-btn:hover {
+    background: rgba(16, 185, 129, 0.2) !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* Redefinición Premium de tablas */
+.gradio-container table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+    background: rgba(10, 15, 30, 0.45) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
+
+.gradio-container th {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    padding: 12px 16px !important;
+    text-align: left !important;
+}
+
+.gradio-container tr {
+    transition: background 0.15s ease !important;
+}
+
+.gradio-container tr:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.gradio-container td {
+    padding: 12px 16px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    color: rgba(230, 237, 243, 0.9) !important;
+}
+
+.gradio-container .table-wrap {
+    border-radius: 12px !important;
+    border: none !important;
+}
+
+/* ── Google Maps Highlight Card Premium ── */
+.maps-highlight-card {
+    background: rgba(249, 115, 22, 0.03) !important; /* Toque muy sutil del naranja de Maps */
+    border: 1px solid rgba(249, 115, 22, 0.15) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    margin: 16px 0 !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+.maps-highlight-card:hover {
+    border-color: rgba(249, 115, 22, 0.3) !important;
+    box-shadow: 0 6px 24px rgba(249, 115, 22, 0.08) !important;
+    background: rgba(249, 115, 22, 0.04) !important;
+}
+
+#maps-geo-toggle-checkbox {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    padding: 10px 14px !important;
+    margin-bottom: 12px !important;
+    width: 100% !important;
+}
+
+#maps-geo-toggle-checkbox:hover {
+    border-color: rgba(249, 115, 22, 0.4) !important;
+}
+
+.maps-controls-group {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin-top: 10px !important;
+}
+
+.maps-status-info {
+    background: rgba(249, 115, 22, 0.08) !important;
+    border: 1px solid rgba(249, 115, 22, 0.2) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+    font-size: 13px !important;
+    color: #ffd8a8 !important;
+    margin-top: 14px !important;
+}
+
+/* ── Recolorización de Avatares en el Chat (Fondo Oscuro) ── */
+.gradio-container .avatar-container img[src*="user-4.svg"],
+.gradio-container .message-row img[src*="user-4.svg"],
+.gradio-container .message img[src*="user-4.svg"] {
+    filter: brightness(0) saturate(100%) invert(60%) sepia(80%) saturate(900%) hue-rotate(190deg) brightness(100%) contrast(100%) !important;
+}
+
+.gradio-container .avatar-container img[src*="gemini.svg"],
+.gradio-container .message-row img[src*="gemini.svg"],
+.gradio-container .message img[src*="gemini.svg"] {
+    filter: brightness(0) saturate(100%) invert(53%) sepia(85%) saturate(1500%) hue-rotate(205deg) brightness(100%) contrast(100%) !important;
+}
+
+.gradio-container .avatar-container img[src*="deepseek.svg"],
+.gradio-container .message-row img[src*="deepseek.svg"],
+.gradio-container .message img[src*="deepseek.svg"] {
+    filter: brightness(0) saturate(100%) invert(71%) sepia(74%) saturate(2300%) hue-rotate(185deg) brightness(100%) contrast(100%) !important;
+}
+
+.gradio-container .avatar-container img[src*="claude.svg"],
+.gradio-container .message-row img[src*="claude.svg"],
+.gradio-container .message img[src*="claude.svg"] {
+    filter: brightness(0) saturate(100%) invert(60%) sepia(70%) saturate(1200%) hue-rotate(345deg) brightness(100%) contrast(100%) !important;
+}
+
+.gradio-container .avatar-container img[src*="open-ai.svg"],
+.gradio-container .message-row img[src*="open-ai.svg"],
+.gradio-container .message img[src*="open-ai.svg"] {
+    filter: brightness(0) saturate(100%) invert(65%) sepia(45%) saturate(700%) hue-rotate(120deg) brightness(100%) contrast(100%) !important;
+}
+
+.gradio-container .avatar-container img[src*="robot-solid-full.svg"],
+.gradio-container .message-row img[src*="robot-solid-full.svg"],
+.gradio-container .message img[src*="robot-solid-full.svg"] {
+    filter: brightness(0) saturate(100%) invert(71%) sepia(74%) saturate(2300%) hue-rotate(185deg) brightness(100%) contrast(100%) !important;
+}
 """
 

@@ -13,7 +13,8 @@ from ui.dashboard import (plot_sentiment, plot_emotions, plot_categories,
                           plot_platform_counts, plot_map, plot_places_preview)
 from ui.styles import (CUSTOM_CSS, get_model_badge_html, get_social_selector_html,
                        get_selection_cards_html, get_kpi_cards_html,
-                       get_analysis_summary_html, SOCIAL_MEDIA_DEFS, SOCIAL_ICONS)
+                       get_analysis_summary_html, SOCIAL_MEDIA_DEFS, SOCIAL_ICONS,
+                       ICON_DOWNLOAD_1, ICON_FILE_CSV, ICON_FILE_EXCEL)
 from llm_manager import (list_available_models, get_provider_status, PROHIBITED_MODELS,
                          PROVIDER_OF, discover_embedding_model)
 
@@ -31,6 +32,14 @@ DEFAULT_MODEL = next(
 )
 MODEL_CHOICES    = [(f"{m['label']} | {m['pricing']}", m["id"]) for m in AVAILABLE_MODELS]
 PROVIDER_STATUS  = get_provider_status()
+PROVIDER_AVATARS = {
+    "google":    str(Path(__file__).parent / "icons" / "gemini.svg"),
+    "deepseek":  str(Path(__file__).parent / "icons" / "deepseek.svg"),
+    "anthropic": str(Path(__file__).parent / "icons" / "claude.svg"),
+    "openai":    str(Path(__file__).parent / "icons" / "open-ai.svg"),
+}
+USER_AVATAR = str(Path(__file__).parent / "icons" / "user-4.svg")
+BOT_AVATAR  = str(Path(__file__).parent / "icons" / "robot-solid-full.svg")
 EMB_MODEL        = discover_embedding_model()
 logger.info(f"Embedding: {'✅ '+EMB_MODEL if EMB_MODEL else '❌ No detectado'}")
 
@@ -180,7 +189,7 @@ def _render_results(result, state, social_medias):
     state.df, state.stats, state.errors = result["dataframe"], result["stats"], result["errors"]
 
     _show_cols = [c for c in state.df.columns if c not in ("embedding", "id", "latitude", "longitude")]
-    display_df = state.df[_show_cols] if not state.df.empty else state.df
+    display_df = state.df[_show_cols].head(50) if not state.df.empty else state.df
 
     sp = plot_sentiment(state.df) if not state.df.empty else None
     ep = plot_emotions(state.df)  if not state.df.empty else None
@@ -661,34 +670,46 @@ with gr.Blocks(title="ChismesitoGPT v2") as demo:
                     max_comments = gr.Slider(minimum=1, maximum=50, value=10, step=1,
                                              label="Comentarios por plataforma", info="Menos = mas rapido")
 
-                with gr.Accordion("📍 Configuración de Google Maps (Búsqueda Geográfica)", open=False):
+                with gr.Column(elem_classes=["maps-highlight-card"]):
+                    gr.HTML(f"""
+                    <div class="maps-card-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <img src="{SOCIAL_ICONS['maps']}" style="width: 24px; height: 24px; filter: brightness(0) saturate(100%) invert(48%) sepia(85%) saturate(1200%) hue-rotate(345deg) brightness(95%) contrast(90%);" alt="Maps icon" />
+                        <div style="line-height: 1.2;">
+                            <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #f0f6fc; font-family: 'Inter', sans-serif; letter-spacing: 0.05em; text-transform: uppercase;">📍 Búsqueda Geográfica de Google Maps</h3>
+                            <span style="font-size: 11px; color: rgba(255,255,255,0.45); font-family: 'Inter', sans-serif;">Encuentra y analiza reseñas de establecimientos en un radio específico</span>
+                        </div>
+                    </div>
+                    """)
                     maps_geo_toggle = gr.Checkbox(
-                        label="Activar búsqueda geográfica por cercanía",
+                        label="Activar búsqueda por cercanía geográfica (GPS / Radio)",
                         value=False,
-                        info="Busca en un radio alrededor de una ubicación central en vez de búsqueda global."
+                        elem_id="maps-geo-toggle-checkbox"
                     )
-                    with gr.Group(visible=False) as maps_geo_group:
-                        maps_center_type = gr.Radio(
-                            choices=[MAPS_CENTER_DEFAULT, MAPS_CENTER_COORDS, MAPS_CENTER_GPS],
-                            value=MAPS_CENTER_DEFAULT,
-                            label="Centro de búsqueda",
-                        )
-                        maps_location = gr.Textbox(
-                            label="Coordenadas (Lat, Lng)",
-                            value="19.4326, -99.1332",
-                            placeholder="Ej: 19.4096, -99.1718",
-                            visible=False,
-                            elem_id="maps-location-input",
-                        )
-                        btn_gps = gr.Button("🧭 Obtener mi ubicación GPS", visible=False, size="sm")
-                        maps_radius = gr.Slider(
-                            label="Radio de búsqueda (metros)",
-                            minimum=100, maximum=10000, value=2000, step=100,
-                            info="Rango a la redonda desde el centro de búsqueda"
-                        )
+                    with gr.Column(visible=False, elem_classes=["maps-controls-group"]) as maps_geo_group:
+                        with gr.Row():
+                            with gr.Column(scale=1):
+                                maps_center_type = gr.Radio(
+                                    choices=[MAPS_CENTER_DEFAULT, MAPS_CENTER_COORDS, MAPS_CENTER_GPS],
+                                    value=MAPS_CENTER_DEFAULT,
+                                    label="📍 Centro de búsqueda",
+                                )
+                                maps_location = gr.Textbox(
+                                    label="Coordenadas (Lat, Lng)",
+                                    value="19.4326, -99.1332",
+                                    placeholder="Ej: 19.4096, -99.1718",
+                                    visible=False,
+                                    elem_id="maps-location-input",
+                                )
+                                btn_gps = gr.Button("🧭 Obtener mi ubicación GPS", visible=False, size="sm")
+                            with gr.Column(scale=1):
+                                maps_radius = gr.Slider(
+                                    label="🎯 Radio de búsqueda (metros)",
+                                    minimum=100, maximum=10000, value=2000, step=100,
+                                    info="Rango a la redonda desde el centro seleccionado"
+                                )
                         maps_info = gr.Markdown(
                             "📍 **Ubicación activa:** Centro de la Ciudad de México (`19.4326, -99.1332`).",
-                            elem_classes=["status-md"],
+                            elem_classes=["maps-status-info"],
                         )
 
                 # ── Modo de extracción ──
@@ -729,11 +750,18 @@ with gr.Blocks(title="ChismesitoGPT v2") as demo:
                 emotion_plot   = gr.Plot(label="Emociones")
                 category_plot  = gr.Plot(label="Top categorías")
 
-                with gr.Accordion("📋 Datos recolectados y descargas", open=False):
-                    data_table    = gr.Dataframe(label="Comentarios recolectados",
+                with gr.Column(elem_classes=["dataset-section"]):
+                    gr.HTML(f"""
+                    <div class="dataset-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <img src="{ICON_DOWNLOAD_1}" style="width: 22px; height: 22px; filter: brightness(0) invert(1);" alt="Download icon" />
+                        <span style="font-size: 15px; font-weight: 600; color: #e6edf3; font-family: 'Inter', sans-serif; letter-spacing: 0.05em; text-transform: uppercase;">📋 Datos recolectados y descargas</span>
+                    </div>
+                    """)
+                    with gr.Row(elem_classes=["download-row"]):
+                        download_csv  = gr.DownloadButton("Descargar CSV", icon=str(Path(__file__).parent / "icons" / "file-csv-solid-full.svg"), elem_id="download-csv-btn", elem_classes=["download-btn"])
+                        download_xlsx = gr.DownloadButton("Descargar Excel", icon=str(Path(__file__).parent / "icons" / "file-excel-solid-full.svg"), elem_id="download-xlsx-btn", elem_classes=["download-btn"])
+                    data_table    = gr.Dataframe(label="Comentarios recolectados (mostrando primeras 50 filas)",
                                                  interactive=False, wrap=True)
-                    download_csv  = gr.File(label="⬇ CSV")
-                    download_xlsx = gr.File(label="📥 Excel")
 
                 with gr.Row():
                     back_to_config_btn = gr.Button("← Volver a configuración", variant="secondary", size="sm")
@@ -768,7 +796,7 @@ with gr.Blocks(title="ChismesitoGPT v2") as demo:
                                 elem_classes=["model-selector-inline"],
                             )
                         model_status = gr.Markdown(f"`{DEFAULT_MODEL}`", visible=False)
-                        chatbot = gr.Chatbot(label="", height=460)
+                        chatbot = gr.Chatbot(label="", height=460, avatar_images=(USER_AVATAR, BOT_AVATAR))
                         with gr.Row():
                             chat_input = gr.Textbox(
                                 label="", placeholder="Pregunta sobre los resultados...",
